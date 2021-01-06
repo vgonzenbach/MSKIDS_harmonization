@@ -1,0 +1,915 @@
+---
+title: "MSKIDS: Combat Harmonization of Healthy Control Volumes"
+author: "Virgilio Gonzenbach & Taki Shinohara"
+date: "12/18/2020"
+output:
+  ioslides_presentation: default
+  slidy_presentation: default
+bibliography: '/Users/vgonzenb/Documents/Bibtex/PennSIVE-temp.bib'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, cache=TRUE)
+
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(neuroCombat)
+library(FactoMineR)
+library(factoextra)
+library(ggpubr)
+library(sjPlot)
+library(sjlabelled)
+
+df = readRDS("data/deriv/HC_data.rds")
+dict = read_xlsx("MUSE_ROI_Dict.xlsx", 1)
+
+# Improve readibility for raw ICV
+df$raw.ICV = df$X702
+
+# Batch
+site = paste(df$site, df$scanner, sep = "-") %>% as.factor()
+
+# Drop  batch with n=7
+df = df[site != "HSC-SIEMENSTIMTRIO", ]
+site = site[site != "HSC-SIEMENSTIMTRIO"]
+site = droplevels(site)
+
+# Pick volumes
+indexes = paste0("X", 1:300)
+indexes = indexes[indexes %in% colnames(df)] # keep indexes that match a column name
+
+# Sex Filters
+M_filter = df$sex == "MALE"
+F_filter = df$sex == "FEMALE"
+
+# Tissue filters
+dict_s = dict[dict$ROI_INDEX %in% 2:300, ]
+VN_filter = dict_s$TISSUE_SEG == "VN"
+GM_filter = dict_s$TISSUE_SEG == "GM"
+WM_filter = dict_s$TISSUE_SEG == "WM"
+```
+
+## Scanners and Sites
+
+```{r, echo=FALSE}
+table(df$scanner)
+table(df$site)
+```
+
+## Scanners by Sites
+
+```{r}
+table(df$scanner, df$site)
+```
+
+Excluding HSC-SIEMENSTIMTRIO (n=7) for now.
+
+```{r, echo=FALSE}
+print("Site-Scanner Pairs:");levels(site)
+```
+
+## Plot: Age
+
+```{r}
+df %>% ggplot(aes(x=site, y=age, color = site)) + geom_boxplot() 
+```
+
+
+## ANOVA: Age
+
+```{r}
+anova(lm(age~site, data = df))
+```
+
+Average age differs across sites.
+
+## Plot: Sex
+```{r}
+# Age by sex distr
+p = df %>% ggplot(aes(x= sex, color=sex, y=age)) + 
+  facet_wrap(~ site) + 
+  geom_boxplot()
+change_palette(p, palette = "npg")
+```
+
+## Model: Sex
+
+```{r}
+table(df$site, df$sex)
+table(df$site, df$sex) / colSums(table(df$sex, df$site))
+chisq.test(df$site, df$sex)
+```
+
+## Layout
+
+1. Harmonization of **intracranial volume (ICV).**  
+
+2. Harmonization of **145** volumes  
+
+3. ICV Normalization of 145 volumes  
+
+Harmonization method: ComBat (@Johnson2007c, @Fortin2017c, -@Fortin2018c).
+
+## Layout: Options 
+
+1. Harmonization of **intracranial volume (ICV).**  
+    A. As single dataset.  
+    B. **By Splitting data by Males and Females (M/F).**  
+
+2. Harmonization of **145** volumes  
+    A. As single dataset.  
+    B. **By splitting data by Males and Females (M/F).**  
+    C. By splitting data by tissues (Tissue).  
+    D. B + C.  
+    
+3. ICV Normalization of 145 volumes  
+    A. No adjustment.  
+    B. ICV Residualization: Splitting data by Males and Females (M/F).  
+    C. ICV Residualization: Joint (i.e. no M/F split).  
+    D. ICV as Covariate.  
+
+## ICV (Raw)
+
+```{r}
+df %>% ggplot(aes(x = site, y = raw.ICV, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex)
+```
+
+## ICV ~ Age [PNC]
+```{r}
+pnc = df %>% filter(site == "PNC")
+p = pnc %>% ggplot(aes(x = age, y = raw.ICV, col=sex)) + geom_point() + geom_smooth(method = "lm") + ylab("ICV") + facet_wrap(~sex)
+suppressMessages(print(change_palette(p, palette = "npg"))) 
+```
+
+## Model: ICV ~ Age [PNC]
+
+```{r}
+## Std ICV -> Label ICV -> Prep Age2 -> Model
+# PNC
+pnc$raw.ICV_std = (pnc$raw.ICV - mean(pnc$raw.ICV)) / sd(pnc$raw.ICV)
+pnc$raw.ICV_std = set_label(pnc$raw.ICV_std, "ICV")
+pnc$age2 = (pnc$age - mean(pnc$age))^2
+lm0 = lm(raw.ICV_std ~scale(age) + sex + scale(age2), data=pnc)
+
+# Males
+pnc_M = pnc %>% filter(sex == "MALE")
+pnc_M$raw.ICV_std = (pnc_M$raw.ICV - mean(pnc_M$raw.ICV)) / sd(pnc_M$raw.ICV)
+pnc_M$raw.ICV_std = set_label(pnc_M$raw.ICV_std, "ICV [M]")
+pnc_M$age2 = (pnc_M$age - mean(pnc_M$age))^2
+lm1 = lm(raw.ICV_std ~scale(age) + scale(age2), data=pnc_M)
+
+# Females
+pnc_F = pnc %>% filter(sex == "FEMALE")
+pnc_F$raw.ICV_std = (pnc_F$raw.ICV - mean(pnc_F$raw.ICV)) / sd(pnc_F$raw.ICV)
+pnc_F$raw.ICV_std = set_label(pnc_F$raw.ICV_std, "ICV [F]")
+pnc_F$age2 = (pnc_F$age - mean(pnc_F$age))^2
+lm2 = lm(raw.ICV_std ~scale(age) + scale(age2), data=pnc_F)
+
+## Males: Age 2
+suppressMessages(tab_model(lm0, lm1, lm2, show.ci = FALSE, p.style = "asterisk"))
+```
+
+## Model: ICV ~ Age [PNC, Males]
+
+```{r}
+pnc_M = pnc %>% filter(sex == "MALE")
+pnc_M$raw.ICV_std = (pnc_M$raw.ICV - mean(pnc_M$raw.ICV)) / sd(pnc_M$raw.ICV)
+pnc_M$raw.ICV_std = set_label(pnc_M$raw.ICV_std, "ICV [M]")
+lm1 = lm(raw.ICV_std ~scale(age), data=pnc_M)
+suppressMessages(tab_model(lm1))
+
+pnc_F = pnc %>% filter(sex == "FEMALE")
+pnc_F$raw.ICV_std = (pnc_F$raw.ICV - mean(pnc_F$raw.ICV)) / sd(pnc_F$raw.ICV)
+pnc_F$raw.ICV_std = set_label(pnc_F$raw.ICV_std, "ICV [F]")
+lm2 = lm(raw.ICV_std ~scale(age), data=pnc_F)
+suppressMessages(tab_model(lm2))
+```
+
+## Model: ICV ~ Age [PNC, Females]
+
+```{r}
+pnc$raw.ICV_std = (pnc$raw.ICV - mean(pnc$raw.ICV)) / sd(pnc$raw.ICV)
+pnc$raw.ICV_std = set_label(pnc$raw.ICV_std, "ICV")
+lm0 = lm(raw.ICV_std ~scale(age), data=pnc)
+suppressMessages(tab_model(lm0))
+```
+
+
+## site contribution
+```{r}
+# anova comparison
+anova(lm(raw.ICV ~ sex + age + age*sex, data=df), lm(raw.ICV ~ sex + age + age*sex + site, data=df))
+```
+
+```{r include=FALSE}
+# Harmonize ICV
+mod = model.matrix(~ sex + age + age*sex, data = df)
+resCombat = neuroCombat::neuroCombat(dat = t(df$raw.ICV),
+                                     batch = site, 
+                                     mod = mod,
+                                     eb = FALSE,
+                                     parametric=TRUE)
+ICV = t(resCombat$dat.combat)
+```
+
+```{r, include=FALSE}
+## Harmonize ICV per Sex
+library(neuroCombat)
+
+# Males
+mod_M = model.matrix(~ age, data = df[M_filter,])
+ICV_M = neuroCombat::neuroCombat(dat = t(df$raw.ICV[M_filter]), 
+                                       batch = site[M_filter], 
+                                       mod = mod_M,
+                                       eb = FALSE,
+                                       parametric=TRUE)
+
+# Females
+mod_F = model.matrix(~ age, data = df[F_filter,])
+ICV_F = neuroCombat::neuroCombat(dat = t(df$raw.ICV[F_filter]), 
+                                       batch = site[F_filter], 
+                                       mod = mod_F,
+                                       eb = FALSE,
+                                       parametric=TRUE)
+
+
+ICV_MF = ICV
+
+ICV_MF[M_filter] = t(ICV_M$dat.combat)
+ICV_MF[F_filter] = t(ICV_F$dat.combat)
+```
+
+## Harmonized ICV 
+```{r}
+# Visualize ICV All and MF
+p_all = df %>% ggplot(aes(x = site, y = ICV, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("All")
+p_MF = df %>% ggplot(aes(x = site, y = ICV_MF, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("M/F")
+
+ggarrange(p_all, p_MF, nrow = 1, common.legend = TRUE, legend = "bottom")
+
+# M/F split is the best harmonization for ICV
+ICV = ICV_MF
+```
+
+## Harmonized ICV (adj. for sex)
+
+```{r}
+# Visualize ICV All and MF
+p_all = df %>% ggplot(aes(x = site, y = resid(lm(ICV~ age + sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("All")
+p_MF = df %>% ggplot(aes(x = site, y = resid(lm(ICV_MF ~ age + sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("M/F")
+
+ggarrange(p_all, p_MF, nrow = 1, common.legend = TRUE, legend = "bottom")
+```
+
+## Harmonized ICV (adj. for age)
+
+```{r}
+# Visualize ICV All and MF
+p_all = df %>% ggplot(aes(x = site, y = resid(lm(ICV~ age)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("All")
+p_MF = df %>% ggplot(aes(x = site, y = resid(lm(ICV_MF ~ age)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("M/F")
+
+ggarrange(p_all, p_MF, nrow = 1, common.legend = TRUE, legend = "bottom")
+```
+
+
+## Harmonized ICV (adj. for age, sex)
+
+```{r}
+# Visualize ICV All and MF
+p_all = df %>% ggplot(aes(x = site, y = resid(lm(ICV~ age + sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("All")
+p_MF = df %>% ggplot(aes(x = site, y = resid(lm(ICV_MF ~ age + sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("M/F")
+
+ggarrange(p_all, p_MF, nrow = 1, common.legend = TRUE, legend = "bottom")
+```
+
+## Scanner contribution
+
+```{r}
+anova(lm(ICV ~ sex + age + sex*age, data=df), lm(ICV ~ sex + age + age*sex + site, data=df))
+```
+
+## ICV Harmonization choice
+
+Past this point, all reference to ICV refers to ICV harmonized by splitting data by sex (M/F; Option 1B).
+
+```{r combat, include=FALSE}
+## ComBat Harmonization
+mod = model.matrix(~ sex + age + age*sex + ICV, data = df)
+resCombat = neuroCombat::neuroCombat(dat = t(df[, indexes]), 
+                                     batch = site, 
+                                     mod = mod,
+                                     eb = TRUE,
+                                     parametric= TRUE,
+                                     ref.batch = "PNC-SIEMENSTIMTRIO")
+
+harmon_df = df
+harmon_df[, indexes] = t(resCombat$dat.combat)
+```
+
+
+```{r}
+WM = data.frame(combat = rowSums(harmon_df[,indexes][WM_filter]))
+
+harmon_df %>% ggplot(aes(x = site, y = WM$combat, color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("Combat")
+```
+
+```{r combat, include=FALSE}
+## ComBat Harmonization
+mod = model.matrix(~ sex + age + age*sex + raw.ICV, data = df)
+resCombat = neuroCombat::neuroCombat(dat = t(df[, indexes]), 
+                                     batch = site, 
+                                     mod = mod,
+                                     eb = TRUE,
+                                     parametric= TRUE,
+                                     ref.batch = "PNC-SIEMENSTIMTRIO")
+
+harmon_df = df
+harmon_df[, indexes] = t(resCombat$dat.combat)
+
+WM = data.frame(combat = rowSums(harmon_df[,indexes][WM_filter]))
+
+harmon_df %>% ggplot(aes(x = site, y = WM$combat, color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("Combat")
+```
+
+
+```{r}
+WM = data.frame(combat = rowSums(harmon_df[,indexes][WM_filter]))
+
+harmon_df %>% ggplot(aes(x = site, y = WM$combat, color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("Combat")
+```
+
+
+
+```{r combat_MF, include=FALSE}
+## ComBat Harmonization
+mod_M = model.matrix(~ age + ICV[M_filter], data = df[M_filter,])
+resCombat_M = neuroCombat::neuroCombat(dat = t(df[M_filter, indexes]), 
+                                     batch = site[M_filter], 
+                                     mod = mod_M,
+                                     eb = TRUE,
+                                     parametric= TRUE,
+                                     ref.batch = "PNC-SIEMENSTIMTRIO")
+
+mod_F = model.matrix(~ age + ICV[F_filter], data = df[F_filter,])
+resCombat_F = neuroCombat::neuroCombat(dat = t(df[F_filter, indexes]), 
+                                     batch = site[F_filter], 
+                                     mod = mod_F,
+                                     eb = TRUE,
+                                     parametric= TRUE,
+                                     ref.batch = "PNC-SIEMENSTIMTRIO")
+
+harmon_df_MF = df
+harmon_df_MF[M_filter, indexes] = t(resCombat_M$dat.combat)
+harmon_df_MF[F_filter, indexes] = t(resCombat_F$dat.combat)
+```
+
+```{r combat_tissue, include=FALSE}
+vol = df[,indexes]
+
+mod = model.matrix(~ sex + age + age*sex + ICV, data = df)
+vn_combat = neuroCombat(dat = t(vol[, VN_filter]),
+                        batch = site,
+                        mod = mod,
+                        ref.batch = "PNC-SIEMENSTIMTRIO"
+                        )
+gm_combat = neuroCombat(dat = t(vol[, GM_filter]),
+                        batch = site,
+                        mod = mod,
+                        ref.batch = "PNC-SIEMENSTIMTRIO"
+                        )
+wm_combat = neuroCombat(dat = t(vol[, WM_filter]),
+                        batch = site,
+                        mod = mod,
+                        ref.batch = "PNC-SIEMENSTIMTRIO"
+                        )
+bs_combat = neuroCombat(dat = t(vol$X35), #brainstem
+                        batch = site,
+                        mod = mod,
+                        eb = FALSE, 
+                        parametric = TRUE,
+                        ref.batch = "PNC-SIEMENSTIMTRIO"
+                        )
+
+vol[,VN_filter] = t(vn_combat$dat.combat)
+vol[,GM_filter] = t(gm_combat$dat.combat)
+vol[,WM_filter] = t(wm_combat$dat.combat)
+vol$X35 = t(bs_combat$dat.combat)
+
+harmon_df_tissue = df
+harmon_df_tissue[,indexes] = vol
+```
+
+```{r combat_MF_tissue, include=FALSE}
+# Do both MF and tissues
+vol = df[,indexes]
+mod_M = model.matrix(~ age + ICV[M_filter], data = df[M_filter,])
+vn_combat = neuroCombat(dat = t(vol[M_filter, VN_filter]),
+                        batch = site[M_filter],
+                        mod = mod_M,
+                        ref.batch = "PNC-SIEMENSTIMTRIO"
+                        )
+gm_combat = neuroCombat(dat = t(vol[M_filter, GM_filter]),
+                        batch = site[M_filter],
+                        mod = mod_M,
+                        ref.batch = "PNC-SIEMENSTIMTRIO"
+                        )
+wm_combat = neuroCombat(dat = t(vol[M_filter, WM_filter]),
+                        batch = site[M_filter],
+                        mod = mod_M,
+                        ref.batch = "PNC-SIEMENSTIMTRIO"
+                        )
+bs_combat = neuroCombat(dat = t(vol$X35[M_filter]), #brainstem
+                        batch = site[M_filter],
+                        mod = mod_M,
+                        eb = FALSE, 
+                        parametric = TRUE,
+                        ref.batch = "PNC-SIEMENSTIMTRIO"
+                        )
+vol[M_filter,VN_filter] = t(vn_combat$dat.combat)
+vol[M_filter,GM_filter] = t(gm_combat$dat.combat)
+vol[M_filter,WM_filter] = t(wm_combat$dat.combat)
+vol$X35[M_filter] = t(bs_combat$dat.combat)
+
+# Females
+mod_F = model.matrix(~ age + ICV[F_filter], data = df[F_filter,])
+vn_combat = neuroCombat(dat = t(vol[F_filter, VN_filter]),
+                        batch = site[F_filter],
+                        mod = mod_F,
+                        ref.batch = "PNC-SIEMENSTIMTRIO"
+                        )
+gm_combat = neuroCombat(dat = t(vol[F_filter, GM_filter]),
+                        batch = site[F_filter],
+                        mod = mod_F,
+                        ref.batch = "PNC-SIEMENSTIMTRIO"
+                        )
+wm_combat = neuroCombat(dat = t(vol[F_filter, WM_filter]),
+                        batch = site[F_filter],
+                        mod = mod_F,
+                        ref.batch = "PNC-SIEMENSTIMTRIO"
+                        )
+bs_combat = neuroCombat(dat = t(vol$X35[F_filter]), #brainstem
+                        batch = site[F_filter],
+                        mod = mod_F,
+                        eb = FALSE, 
+                        parametric = TRUE,
+                        ref.batch = "PNC-SIEMENSTIMTRIO"
+                        )
+vol[F_filter,VN_filter] = t(vn_combat$dat.combat)
+vol[F_filter,GM_filter] = t(gm_combat$dat.combat)
+vol[F_filter,WM_filter] = t(wm_combat$dat.combat)
+vol$X35[F_filter] = t(bs_combat$dat.combat)
+
+harmon_df_MF_tissue = df
+harmon_df_MF_tissue[, indexes] = vol
+```
+
+## WM total
+
+```{r}
+# Compute tissue values
+WM = data.frame(raw = rowSums(df[,indexes][WM_filter]), 
+                combat = rowSums(harmon_df[,indexes][WM_filter]),
+                MF= rowSums(harmon_df_MF[,indexes][WM_filter]),
+                tissue = rowSums(harmon_df_tissue[,indexes][WM_filter]),
+                MF_tissue = rowSums(harmon_df_MF_tissue[,indexes][WM_filter]))
+
+# WM total
+p1 = harmon_df %>% ggplot(aes(x = site, y = WM$combat, color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("Combat")
+p2 = harmon_df_MF %>% ggplot(aes(x = site, y = WM$MF, color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("M/F")
+p3 = harmon_df_tissue %>% ggplot(aes(x = site, y = WM$tissue, color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("Tissues")
+p4 = harmon_df_MF_tissue %>% ggplot(aes(x = site, y = WM$MF_tissue, color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("M/F + Tissues")
+ggarrange(p1, p2, p3, p4, ncol = 2, nrow = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## WM total (adj. for age)
+```{r}
+# WM total - Regressed Age
+p1 = harmon_df %>% ggplot(aes(x = site, y = resid(lm(WM$combat~ age)), color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("Combat")
+p2 = harmon_df_MF %>% ggplot(aes(x = site, y = resid(lm(WM$MF~ age)), color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("M/F")
+p3 = harmon_df_tissue %>% ggplot(aes(x = site, y = resid(lm(WM$tissue ~age)), color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("Tissues")
+p4 = harmon_df_MF_tissue %>% ggplot(aes(x = site, y = resid(lm(WM$MF_tissue ~age)), color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("M/F + Tissues")
+ggarrange(p1, p2, p3, p4, ncol = 2, nrow = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## WM total (adj. for age + ICV)
+```{r}
+p1 = harmon_df %>% ggplot(aes(x = site, y = resid(lm(WM$combat~ age + ICV)), color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("Combat")
+p2 = harmon_df_MF %>% ggplot(aes(x = site, y = resid(lm(WM$MF~ age + ICV)), color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("M/F")
+p3 = harmon_df_tissue %>% ggplot(aes(x = site, y = resid(lm(WM$tissue ~ age + ICV)), color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("Tissues")
+p4 = harmon_df_MF_tissue %>% ggplot(aes(x = site, y = resid(lm(WM$MF_tissue ~age + ICV)), color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("M/F + Tissues")
+ggarrange(p1, p2, p3, p4, ncol = 2, nrow = 2, common.legend = TRUE, legend = "bottom")
+```
+
+**M/F** lines up residualized WM volumes best.
+
+## GM total
+
+```{r}
+GM = data.frame(raw = rowSums(df[,indexes][GM_filter]), 
+                combat = rowSums(harmon_df[,indexes][GM_filter]),
+                MF = rowSums(harmon_df_MF[,indexes][GM_filter]),
+                tissue = rowSums(harmon_df_tissue[,indexes][GM_filter]),
+                MF_tissue = rowSums(harmon_df_MF_tissue[,indexes][GM_filter]))
+
+# GM total
+p1 = harmon_df %>% ggplot(aes(x = site, y = GM$combat, color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("Combat")
+p2 = harmon_df_MF %>% ggplot(aes(x = site, y = GM$MF, color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("M/F")
+p3 = harmon_df_tissue %>% ggplot(aes(x = site, y = GM$tissue, color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("Tissues")
+p4 = harmon_df_MF_tissue %>% ggplot(aes(x = site, y = GM$MF_tissue, color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("M/F + Tissues")
+ggarrange(p1, p2, p3, p4, ncol = 2, nrow = 2,common.legend = TRUE, legend = "bottom")
+```
+
+## GM total (adj. for age)
+
+```{r}
+# GM total - Regressed Age
+p1 = harmon_df %>% ggplot(aes(x = site, y = resid(lm(GM$combat~ age)), color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("Combat")
+p2 = harmon_df_MF %>% ggplot(aes(x = site, y = resid(lm(GM$MF~ age)), color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("M/F")
+p3 = harmon_df_tissue %>% ggplot(aes(x = site, y = resid(lm(GM$tissue ~age)), color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("Tissues")
+p4 = harmon_df_MF_tissue %>% ggplot(aes(x = site, y = resid(lm(GM$MF_tissue ~age)), color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("M/F + Tissues")
+ggarrange(p1, p2, p3, p4, ncol = 2, nrow = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## GM total (adj for age + ICV)
+
+```{r}
+p1 = harmon_df %>% ggplot(aes(x = site, y = resid(lm(GM$combat~ age + ICV)), color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("Combat")
+p2 = harmon_df_MF %>% ggplot(aes(x = site, y = resid(lm(GM$MF~ age + ICV)), color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("M/F")
+p3 = harmon_df_tissue %>% ggplot(aes(x = site, y = resid(lm(GM$tissue ~ age + ICV)), color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("Tissues")
+p4 = harmon_df_MF_tissue %>% ggplot(aes(x = site, y = resid(lm(GM$MF_tissue ~age + ICV)), color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("M/F + Tissues")
+ggarrange(p1, p2, p3, p4, ncol = 2, nrow = 2, common.legend = TRUE, legend = "bottom")
+```
+
+**M/F** also performs the best on residualized GM volumes.
+
+## ROI Harmonization choice
+
+Past this point, all reference to ROI refers refers to ROIs harmonized by splitting data by sex (M/F; Option 2B).
+
+## ANOVAs: M/F split harmonization
+
+For each of the 145 ROI volumes, two models were used:   
+- Model 1: ROI ~ sex + age + age**x**sex (+ ICV)  
+- Model 2: ROI ~ sex + age + age**x**sex (+ ICV) + scanner
+
+Number of models for which scanner variables contributes new information is shown below.
+
+```{r}
+# Pick best harmonization
+harmon_df = harmon_df_MF
+
+## ANOVA of all regions
+Ps = matrix(nrow=4, ncol=length(indexes))
+colnames(Ps) = indexes
+
+# ANOVAs Raw
+l = df[,indexes] %>% lapply(function(x) anova(lm(x ~ sex + age + age*sex, data=df), 
+                                              lm(x ~ sex + age + age*sex+ site, data=df)))
+for(i in indexes) Ps[1,i] = l[[i]]$`Pr(>F)`[2]
+
+# ANOVA Raw (ICV)
+l = df[,indexes] %>% lapply(function(x) anova(lm(x ~ sex + age + age*sex + raw.ICV, data=df), 
+                                              lm(x ~ sex + age + age*sex + raw.ICV + site, data=df)))
+for(i in indexes) Ps[2,i] = l[[i]]$`Pr(>F)`[2]
+
+# ANOVAs - Harmonized
+l = harmon_df[,indexes] %>% lapply(function(x) anova(lm(x ~ sex + age + age*sex, data=df), 
+                                                     lm(x ~ sex + age + age*sex + site, data=df)))
+for(i in indexes) Ps[3,i] = l[[i]]$`Pr(>F)`[2]
+# ANOVAs - (ICV)
+l = harmon_df[,indexes] %>% lapply(function(x) anova(lm(x ~ sex + age + age*sex + ICV, data=df), 
+                                                     lm(x ~ sex + age + age*sex + ICV + site, data=df)))
+for(i in indexes) Ps[4,i] = l[[i]]$`Pr(>F)`[2]
+
+p = rowSums(Ps < (0.05/145))
+names(p) = c("Raw", "Raw (ICV adj)", "Combat", "Combat (ICV adj)")
+p
+```
+
+## Correcting for ICV in volumes
+
+ROIs are corrected for ICV with the formula  
+$$ROI_{adj} = ROI - \beta (ICV - \overline{ICV})$$  
+where $\beta$ represents the ICV-ROI slope and $\overline{ICV}$ is the average ICV of subjects in the data used for the correction [@Nordenskjold2015a].
+
+In this presentation, ROIs are corrected for ICV separately in males and females. Effects of correcting across the data as whole is also shown.
+
+```{r, include=FALSE}
+# Pick best harmonization
+harmon_df$WM = WM$MF
+harmon_df$GM = GM$MF
+
+df_1b = harmon_df
+df_unadj = harmon_df
+
+## Correction for ICV
+# Get betas
+b = apply(harmon_df[,c(indexes, "WM", "GM")], 2, function(x) coef(lm(x ~ ICV))[2])
+b_M = apply(harmon_df[M_filter, c(indexes, "WM", "GM")], 2, function(x) coef(lm(x ~ ICV[M_filter]))[2])
+b_F = apply(harmon_df[F_filter, c(indexes, "WM", "GM")], 2, function(x) coef(lm(x ~ ICV[F_filter]))[2]) 
+
+# Adjust volumes
+for(i in c(indexes, "WM", "GM")){
+  harmon_df[M_filter, i] = harmon_df[M_filter, i] - b_M[i] * (ICV[M_filter] - mean(ICV[M_filter]))
+  harmon_df[F_filter, i] = harmon_df[F_filter, i] - b_F[i] * (ICV[F_filter] - mean(ICV[F_filter]))
+  df_1b[, i] = as.vector(df_1b[, i] - b[i] * (ICV - mean(ICV)))
+  
+}
+```
+
+```{r, include=FALSE}
+# PCA
+resPCA = FactoMineR::PCA(harmon_df[, indexes], 
+                         scale.unit = FALSE, 
+                         graph = FALSE,
+                         ncp = 4)
+
+resPCA_sup = FactoMineR::PCA(harmon_df[, c(indexes, "WM", "GM")], 
+                         scale.unit = FALSE, 
+                         graph = FALSE,
+                         quanti.sup = 146:147,
+                         ncp = 4)
+
+resPCA_1b = FactoMineR::PCA(df_1b[, indexes], 
+                         scale.unit = FALSE, 
+                         graph = FALSE,
+                         ncp = 4)
+
+get_ctr = function(resPCA, dim){
+  impt_var =  names(which(resPCA$var$contrib[,dim] > 100/145)) # which var contribute more than average: 100/145
+  most_impt = sort(resPCA$var$contrib[impt_var, dim], decreasing =  TRUE)[1:6]
+  index = as.numeric(gsub(".*?([0-9]+).*", "\\1", names(most_impt)))
+  ctr = data.frame(ctr = unname(most_impt), index)
+  
+  ctr_df = cbind(contr = ctr[,1], dict[match(ctr$index, dict$ROI_INDEX),1:4])
+  return(ctr_df)
+}
+
+data = data.frame(pc1 = resPCA$ind$coord[,1], 
+                  pc2 = resPCA$ind$coord[,2], 
+                  pc3 = resPCA$ind$coord[,3],
+                  pc4 = resPCA$ind$coord[,4],
+                  sex = df$sex,
+                  age = df$age)
+```
+
+## PCA: Scree
+
+(Covariance) PCA was performed with (M/F) ICV-corrected volumes. Then GM and WM totals were projected onto PCs 1 and 2.
+
+```{r}
+fviz_screeplot(resPCA, ncp=30)
+```
+
+## PCA: Loadings
+```{r pca_12}
+# Variables
+plot.PCA(resPCA, choix = "var", axes=c(1,2), cex = 0.6, autoLab = "yes")
+```
+
+## PCA: Contributions
+
+Dimension 1
+```{r}
+get_ctr(resPCA, dim = 1)
+```
+
+Dimension 2
+
+```{r}
+get_ctr(resPCA, dim = 2)
+```
+
+## PCA: Circle of Correlations
+```{r}
+plot.PCA(resPCA_sup, choix = "varcor", axes=c(1,2), cex = 0.5, autoLab = "yes")
+```
+
+Note: Blue lines denote supplementary projections.
+
+## PCA: Factor Scores
+```{r}
+fviz_pca_ind(resPCA, choix = "ind", geom = "point", alpha.ind = 0.5, col.ind = harmon_df$sex)
+```
+
+Sex differences are retained after ICV-residualizing by sex (M/F Residualization).
+
+## PCA: (Whole-Data ICV adj.)
+
+```{r}
+p1 = fviz_pca_ind(resPCA_1b, choix = "ind", geom = "point", alpha.ind = 0.4, col.ind = harmon_df$sex)
+p2 = fviz_pca_var(resPCA_1b, choix = "var", axes=c(1,2), col.var = "steelblue",cex = 0.4)
+ggarrange(p2, p1, nrow = 1)
+```
+
+Alternatively, GM loses contr. toward Dim 2 and sex differences are eliminated if ICV is residualized irrespective of sex (i.e. Joint Residualization).
+
+## Plot: WM (unadj.) ~ Age
+```{r}
+p = df_unadj %>% ggplot(aes(x = age, y = WM, col=sex)) + facet_wrap(~sex) + geom_point() + geom_smooth() 
+suppressMessages(print(change_palette(p, palette = "npg")))
+```
+
+## Plot: WM (M/F Res.) ~ Age
+
+```{r}
+p = harmon_df %>% ggplot(aes(x = age, y = WM, col=sex)) + facet_wrap(~sex) + geom_point() + geom_smooth()
+suppressMessages(print(change_palette(p, palette = "npg")))
+```
+
+## Plot: WM (Joint Res.) ~ Age
+```{r}
+p = df_1b %>% ggplot(aes(x = age, y = WM, col=sex)) + facet_wrap(~sex) + geom_point() + geom_smooth()
+suppressMessages(print(change_palette(p, palette = "npg")))
+```
+
+## Models: WM ~ Age
+
+```{r}
+## Standardize WM -> Label WM_std -> Model
+# Unadj
+df_unadj$WM_std = (df_unadj$WM - mean(df_unadj$WM)) / sd(df_unadj$WM)
+df_unadj$WM_std = set_label(df_unadj$WM_std, label= "WM")
+lm0 = lm(WM_std ~ scale(age) + sex + scale(age)*sex, data = df_unadj)
+
+# M/F
+harmon_df$WM_std = (harmon_df$WM - mean(harmon_df$WM)) / sd(harmon_df$WM)
+harmon_df$WM_std = set_label(harmon_df$WM_std, label = "WM (M/F Res.)")
+lm1 = lm(WM_std ~ scale(age) + sex + scale(age)*sex, data = harmon_df)
+
+# Joint Res
+df_1b$WM_std = (df_1b$WM - mean(df_1b$WM)) / sd(df_1b$WM)
+df_1b$WM_std = set_label(df_1b$WM_std, label = "WM (Joint Res.)")
+lm2 = lm(WM_std ~ scale(age) + sex + scale(age)*sex, data = df_1b)
+
+# ICV as covariate
+df_unadj4cov = df_unadj
+df_unadj4cov$WM_std = (df_unadj$WM - mean(df_unadj$WM)) / sd(df_unadj$WM)
+df_unadj4cov$WM_std = set_label(df_unadj4cov$WM_std, label = "WM")
+lm3 = lm(WM_std ~ scale(age) + sex + scale(age)*sex + ICV, data = df_unadj4cov)
+
+suppressMessages(tab_model(lm0, lm1, lm2, lm3, show.ci = FALSE, p.style = "asterisk"))
+```
+
+In parentheses: ICV normalization method.
+
+## Model: WM ~ Age [Males]
+
+```{r}
+## Split M/F -> Prep Age2 -> Model
+# Unadj
+df_M = df_unadj %>% filter(sex == "MALE")
+age2 = (df_M$age - mean(df_M$age))^2
+lm0 = lm(WM_std ~ scale(age) + scale(age2), data = df_M)
+
+# M/F
+df_M = harmon_df %>% filter(sex == "MALE")
+age2 = (df_M$age - mean(df_M$age))^2
+lm1 = lm(WM_std ~ scale(age) + scale(age2), data = df_M)
+
+# Joint Res
+df_M = df_1b %>% filter(sex == "MALE")
+age2 = (df_M$age - mean(df_M$age))^2
+lm2 = lm(WM_std ~ scale(age) + scale(age2), data = df_M)
+
+# ICV as Cov
+df_M = df_unadj4cov %>% filter(sex == "MALE")
+age2 = (df_M$age - mean(df_M$age))^2
+lm3 = lm(WM_std ~ scale(age) + scale(age2) + ICV[M_filter], data = df_M)
+
+suppressMessages(tab_model(lm0, lm1, lm2, lm3, show.ci = FALSE, p.style = "asterisk"))
+```
+
+## Model: WM ~ Age [Females]
+
+```{r}
+## Split M/F -> Prep Age2 -> Model
+# Unadj
+df_F = df_unadj %>% filter(sex == "FEMALE")
+age2 = (df_F$age - mean(df_F$age))^2
+lm0 = lm(WM_std ~ scale(age) + scale(age2), data = df_F)
+
+# M/F
+df_F = harmon_df %>% filter(sex == "FEMALE")
+age2 = (df_F$age - mean(df_F$age))^2
+lm1 = lm(WM_std ~ scale(age) + scale(age2), data = df_F)
+
+# Joint Res
+df_F = df_1b %>% filter(sex == "FEMALE")
+age2 = (df_F$age - mean(df_F$age))^2
+lm2 = lm(WM_std ~ scale(age) + scale(age2), data = df_F)
+
+# ICV as Cov
+df_F = df_unadj4cov %>% filter(sex == "FEMALE")
+age2 = (df_F$age - mean(df_F$age))^2
+lm3 = lm(WM_std ~ scale(age) + scale(age2) + ICV[F_filter], data = df_F)
+
+suppressMessages(tab_model(lm0, lm1, lm2, lm3, show.ci = FALSE, p.style = "asterisk"))
+```
+
+## Plot: GM (unadj.) ~ Age 
+```{r}
+p = df_unadj %>% ggplot(aes(x = age, y = GM)) + facet_wrap(~sex) + geom_point() + geom_smooth() 
+suppressMessages(print(change_palette(p, palette = "npg")))
+```
+
+## Plot: GM (M/F Res.) ~ Age 
+
+```{r}
+p = harmon_df %>% ggplot(aes(x = age, y = GM)) + facet_wrap(~sex) + geom_point() + geom_smooth()
+suppressMessages(print(change_palette(p, palette = "npg")))
+```
+
+## Plot: GM (Joint Res.) ~ Age
+```{r}
+p = df_1b %>% ggplot(aes(x = age, y = GM)) + facet_wrap(~sex) + geom_point() + geom_smooth()
+suppressMessages(print(change_palette(p, palette = "npg")))
+```
+
+## Model: GM ~ Age
+
+```{r}
+## Standardize WM -> Label WM_std -> Model
+# Unadj
+df_unadj$GM_std = (df_unadj$GM - mean(df_unadj$GM)) / sd(df_unadj$GM)
+df_unadj$GM_std = set_label(df_unadj$GM_std, label= "GM")
+lm0 = lm(GM_std ~ scale(age) + sex + scale(age)*sex, data = df_unadj)
+
+# M/F
+harmon_df$GM_std = (harmon_df$GM - mean(harmon_df$GM)) / sd(harmon_df$GM)
+harmon_df$GM_std = set_label(harmon_df$GM_std, label = "GM (M/F Res.)")
+lm1 = lm(GM_std ~ scale(age) + sex + scale(age)*sex, data = harmon_df)
+
+# 1B
+df_1b$GM_std = (df_1b$GM - mean(df_1b$GM)) / sd(df_1b$GM)
+df_1b$GM_std = set_label(df_1b$GM_std, label = "GM (Joint Res.)")
+lm2 = lm(GM_std ~ scale(age) + sex + scale(age)*sex, data = df_1b)
+
+# ICV as covariate
+df_unadj4cov = df_unadj
+df_unadj4cov$GM_std = (df_unadj$GM - mean(df_unadj$GM)) / sd(df_unadj$GM)
+df_unadj4cov$GM_std = set_label(df_unadj4cov$GM_std, label = "GM (Joint Cov.)")
+lm3 = lm(GM_std ~ scale(age) + sex + scale(age)*sex + ICV, data = df_unadj4cov)
+
+suppressMessages(tab_model(lm0, lm1, lm2, lm3, show.ci = FALSE, p.style = "asterisk"))
+```
+
+## Model: GM ~ Age [Males]
+
+```{r}
+## Split M/F -> Prep Age2 -> Model
+# Unadj
+df_M = df_unadj %>% filter(sex == "MALE")
+age2 = (df_M$age - mean(df_M$age))^2
+lm0 = lm(GM_std ~ scale(age) + scale(age2), data = df_M)
+
+# M/F
+df_M = harmon_df %>% filter(sex == "MALE")
+age2 = (df_M$age - mean(df_M$age))^2
+lm1 = lm(GM_std ~ scale(age) + scale(age2), data = df_M)
+
+# Joint Res
+df_M = df_1b %>% filter(sex == "MALE")
+age2 = (df_M$age - mean(df_M$age))^2
+lm2 = lm(GM_std ~ scale(age) + scale(age2), data = df_M)
+
+# ICV as Cov
+df_M = df_unadj4cov %>% filter(sex == "MALE")
+age2 = (df_M$age - mean(df_M$age))^2
+lm3 = lm(GM_std ~ scale(age) + scale(age2) + ICV[M_filter], data = df_M)
+
+suppressMessages(tab_model(lm0, lm1, lm2, lm3, show.ci = FALSE, p.style = "asterisk"))
+```
+
+## Model: GM ~ Age [Females]
+
+```{r}
+## Split M/F -> Prep Age2 -> Model
+# Unadj
+df_F = df_unadj %>% filter(sex == "FEMALE")
+age2 = (df_F$age - mean(df_F$age))^2
+lm0 = lm(GM_std ~ scale(age) + scale(age2), data = df_F)
+
+# M/F
+df_F = harmon_df %>% filter(sex == "FEMALE")
+age2 = (df_F$age - mean(df_F$age))^2
+lm1 = lm(GM_std ~ scale(age) + scale(age2), data = df_F)
+
+# Joint Res
+df_F = df_1b %>% filter(sex == "FEMALE")
+age2 = (df_F$age - mean(df_F$age))^2
+lm2 = lm(GM_std ~ scale(age) + scale(age2), data = df_F)
+
+# ICV as Cov
+df_F = df_unadj4cov %>% filter(sex == "FEMALE")
+age2 = (df_F$age - mean(df_F$age))^2
+lm3 = lm(GM_std ~ scale(age) + scale(age2) + ICV[F_filter], data = df_F)
+
+suppressMessages(tab_model(lm0, lm1, lm2, lm3, show.ci = FALSE, p.style = "asterisk"))
+```
+
+## References
+
+<Insert references for Combat and ICV-normalization.>
