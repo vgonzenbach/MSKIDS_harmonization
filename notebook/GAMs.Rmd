@@ -1,0 +1,422 @@
+---
+title: "EDA: GAMs"
+author: "Virgilio Gonzenbach"
+date: "1/13/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, cache = TRUE, cache.path = 'notebook/cache/', fig.path = "results/figures/")
+```
+
+## Objectives
+
+1. To visualize the nonlinear relationship between age and (1) Intracranial Volume (ICV) and (2) ROIs (e.g., GM, WM).
+
+2. To visualize effects of applying Combat-GAM to data
+
+```{r, include=FALSE}
+library(mgcv)
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(FactoMineR)
+library(factoextra)
+library(ggpubr)
+library(sjPlot)
+library(sjlabelled)
+library(psych)
+
+df = readRDS("data/deriv/HC_data.rds")
+dict = read_xlsx("data/MUSE_ROI_Dict.xlsx", 1)
+
+# Improve readibility for raw ICV
+df$raw.ICV = df$X702
+df$site = as.factor(df$site)
+
+# Batch
+site = paste(df$site, df$scanner, sep = "-") %>% as.factor()
+
+# Pick volumes
+indexes = paste0("X", 1:300)
+indexes = indexes[indexes %in% colnames(df)] # keep indexes that match a column name
+
+# Tissue filters
+dict_s = dict[dict$ROI_INDEX %in% 2:300, ]
+VN_filter = dict_s$TISSUE_SEG == "VN"
+GM_filter = dict_s$TISSUE_SEG == "GM"
+WM_filter = dict_s$TISSUE_SEG == "WM"
+
+df$sex = as.factor(df$sex)
+pnc = df %>% filter(site == "PNC") 
+```
+
+## Age Descriptives Stats
+
+Full dataset:   
+```{r}
+descr = describe(pnc$age)[,c(2:5, 8:9),]
+row.names(descr) = "age"
+descr
+```
+
+Males:
+
+```{r}
+library(psych)
+descr = describe(pnc$age[pnc$sex == 'MALE'])[,c(2:5, 8:9),]
+row.names(descr) = "age"
+descr
+```
+
+Females:
+
+```{r}
+library(psych)
+descr = describe(pnc$age[pnc$sex == 'FEMALE'])[,c(2:5, 8:9),]
+row.names(descr) = "age"
+descr
+```
+
+\pagebreak
+
+## ICV: GAM
+
+```{r, echo=TRUE}
+gam_icv = mgcv::gam(raw.ICV ~ s(age,  by = sex, bs = 'tp') + sex, 
+                    data = pnc,
+                    family = gaussian,
+                    method = 'REML')
+summary(gam_icv)
+```
+
+Model indicates ICV-to-Age relationship in males is approx. linear (EDF $\approx$ 1) and significant. In females, however, the relationship is closer to a quadratic term (EDF  2) and non-significant.
+
+Compare with R-squared of the equivalent linear model (ICV ~ sex + age + age*x*sex):`r round(summary(lm(raw.ICV ~ scale(age) + sex*scale(age), data = pnc))$r.squared, 3)`
+
+Compare GAM and linear model directly:
+
+```{r}
+anova(lm(raw.ICV ~ scale(age) + sex*scale(age) + sex, data = pnc), gam_icv)
+```
+
+\pagebreak
+
+## ICV: Linear models by sex
+
+```{r}
+# separate datasets by sex
+pnc_M = filter(pnc, sex == "MALE")
+pnc_F = filter(pnc, sex == "FEMALE")
+
+# Standardize raw.ICV
+pnc_M$raw.ICV_std = (pnc_M$raw.ICV - mean(pnc_M$raw.ICV)) / sd(pnc_M$raw.ICV)
+pnc_F$raw.ICV_std = (pnc_F$raw.ICV - mean(pnc_F$raw.ICV)) / sd(pnc_F$raw.ICV)
+
+# Label raw.ICV
+pnc_M$raw.ICV_std = set_label(pnc_M$raw.ICV_std, label = "ICV (Males)")
+pnc_F$raw.ICV_std = set_label(pnc_F$raw.ICV_std, label = "ICV (Females)")
+  
+# Prep age2
+age2 = (pnc_M$age - mean(pnc_M$age))^2
+lm_M = lm(raw.ICV_std ~ scale(age) + scale(age2), data = pnc_M)
+
+age2 = (pnc_F$age - mean(pnc_F$age))^2
+lm_F = lm(raw.ICV_std ~ scale(age) + scale(age2), data = pnc_F)
+
+# Show table (pretty)
+suppressMessages(tab_model(lm_M, lm_F,p.style = "numeric"))
+```
+
+\pagebreak
+
+## ICV: Plot GAM
+
+```{r}
+# Males
+gam_icv_M = mgcv::gam(raw.ICV ~ s(age,
+                                k=10,
+                                bs = 'tp'), 
+                    data = filter(pnc, sex == "MALE"),
+                    family = gaussian,
+                    method = 'REML')
+# Females
+gam_icv_F = mgcv::gam(raw.ICV ~ s(age,
+                                k=10,
+                                bs = 'tp'), 
+                    data = filter(pnc, sex == "FEMALE"),
+                    family = gaussian,
+                    method = 'REML')
+
+par(mfrow= c(1, 2))
+plot(gam_icv_F, residuals = TRUE, pch = 1, main = "Females", ylab = "raw ICV", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_icv)[1])
+plot(gam_icv_M, residuals = TRUE, pch = 1, cex = 0.75, ylab = "raw ICV", shade = TRUE, seWithMean = TRUE, shift = coef(gam_icv)[1], main = 'Males')
+```
+
+\pagebreak
+
+## WM: GAM
+
+```{r}
+rois = pnc[, indexes]
+pnc$WM = rowSums(rois[, WM_filter])
+
+gam_wm = mgcv::gam(WM ~ s(age,  by = sex, bs = 'tp') + sex, 
+                    data = pnc,
+                    family = gaussian,
+                    method = 'REML')
+summary(gam_wm)
+```
+
+Model indicates WM-to-Age relationship is nonlinear and statistically significant in both males and females. WM increases with age; but in females, growth stops at 20 years of age.
+
+Compare with R-squared of the equivalent linear model (WM ~ sex + age + age*x*sex):`r round(summary(lm(WM ~ scale(age) + sex*scale(age), data = pnc))$adj.r.squared, 3)`
+
+Compare GAM and linear model directly:
+
+```{r}
+anova(lm(WM ~ scale(age) + sex*scale(age) + sex, data = pnc), gam_wm)
+```
+
+
+\pagebreak
+
+## WM: Linear models by sex
+
+```{r}
+# separate datasets by sex
+pnc_M = filter(pnc, sex == "MALE")
+pnc_F = filter(pnc, sex == "FEMALE")
+
+# Standardize WM
+pnc_M$WM_std = (pnc_M$WM - mean(pnc_M$WM)) / sd(pnc_M$WM)
+pnc_F$WM_std = (pnc_F$WM - mean(pnc_F$WM)) / sd(pnc_F$WM)
+
+# Label WM
+pnc_M$WM_std = set_label(pnc_M$WM_std, label = "WM (Males)")
+pnc_F$WM_std = set_label(pnc_F$WM_std, label = "WM (Females)")
+  
+# Prep age2
+age2 = (pnc_M$age - mean(pnc_M$age))^2
+lm_M = lm(WM_std ~ scale(age) + scale(age2), data = pnc_M)
+
+age2 = (pnc_F$age - mean(pnc_F$age))^2
+lm_F = lm(WM_std ~ scale(age) + scale(age2), data = pnc_F)
+
+# Show table (pretty)
+suppressMessages(tab_model(lm_M, lm_F,p.style = "numeric"))
+```
+
+\pagebreak
+
+## WM: Plot GAM
+
+```{r}
+# Males
+gam_wm_M = mgcv::gam(WM ~ s(age,
+                                k=10,
+                                bs = 'tp'), 
+                    data = filter(pnc, sex == "MALE"),
+                    family = gaussian,
+                    method = 'REML')
+# Females
+gam_wm_F = mgcv::gam(WM ~ s(age,
+                                k=10,
+                                bs = 'tp'), 
+                    data = filter(pnc, sex == "FEMALE"),
+                    family = gaussian,
+                    method = 'REML')
+
+par(mfrow= c(1, 2))
+plot(gam_wm_F, residuals = TRUE, pch = 1, ylab = "raw WM", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_wm_F)[1], main = "Females")
+plot(gam_wm_M, residuals = TRUE, pch = 1, ylab = "raw WM", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_wm_M)[1], main = 'Males')
+```
+
+\pagebreak
+
+## GM: GAM
+
+```{r}
+pnc$GM = rowSums(rois[, GM_filter])
+
+gam_gm = mgcv::gam(GM ~ s(age,  by = sex, bs = 'tp') + sex, 
+                    data = pnc,
+                    family = gaussian,
+                    method = 'REML')
+summary(gam_gm)
+```
+
+Model indicates GM-to-age relationship is linear and statistically significant for both males and females. GM decreases with age.
+
+Compare with adj. R-squared of the equivalent linear model (WM ~ sex + age + age*x*sex):`r round(summary(lm(GM ~ scale(age) + sex*scale(age), data = pnc))$adj.r.squared, 3)`
+
+Compare GAM and linear model directly:
+
+```{r}
+anova(lm(GM ~ scale(age) + sex*scale(age) + sex, data = pnc), gam_gm)
+```
+
+\pagebreak
+
+## GM: Linear models by sex
+
+```{r}
+# separate datasets by sex
+pnc_M = filter(pnc, sex == "MALE")
+pnc_F = filter(pnc, sex == "FEMALE")
+
+# Standardize GM
+pnc_M$GM_std = (pnc_M$GM - mean(pnc_M$GM)) / sd(pnc_M$GM)
+pnc_F$GM_std = (pnc_F$GM - mean(pnc_F$GM)) / sd(pnc_F$GM)
+
+# Label GM
+pnc_M$GM_std = set_label(pnc_M$GM_std, label = "GM (Males)")
+pnc_F$GM_std = set_label(pnc_F$GM_std, label = "GM (Females)")
+  
+# Prep age2
+age2 = (pnc_M$age - mean(pnc_M$age))^2
+lm_M = lm(GM_std ~ scale(age) + scale(age2), data = pnc_M)
+
+age2 = (pnc_F$age - mean(pnc_F$age))^2
+lm_F = lm(GM_std ~ scale(age) + scale(age2), data = pnc_F)
+
+# Show table (pretty)
+suppressMessages(tab_model(lm_M, lm_F,p.style = "numeric"))
+```
+
+## GM: Plot GAM
+
+```{r}
+# Males
+gam_gm_M = mgcv::gam(GM ~ s(age,
+                                k=10,
+                                bs = 'tp'), 
+                    data = filter(pnc, sex == "MALE"),
+                    family = gaussian,
+                    method = 'REML')
+# Females
+gam_gm_F = mgcv::gam(GM ~ s(age,
+                                k=10,
+                                bs = 'tp'), 
+                    data = filter(pnc, sex == "FEMALE"),
+                    family = gaussian,
+                    method = 'REML')
+
+par(mfrow= c(1, 2))
+plot(gam_gm_F, residuals = TRUE, pch = 1, ylab = "raw GM", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_gm_F)[1], main = "Females")
+plot(gam_gm_M, residuals = TRUE, pch = 1, ylab = "raw GM", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_gm_M)[1], main = 'Males')
+```
+
+\pagebreak
+
+## CSF (in ventricles): GAM
+
+```{r}
+pnc$VN = rowSums(rois[, VN_filter])
+
+gam_vn = mgcv::gam(VN ~ s(age,  by = sex, bs = 'tp') + sex, 
+                    data = pnc,
+                    family = gaussian,
+                    method = 'REML')
+summary(gam_vn)
+```
+
+Model indicates CSF-to-age relationship is linear and statistically significant in males and females. CSF increases with age.
+
+Compare with adj. R-squared of the equivalent linear model (CSF ~ sex + age + age*x*sex):`r round(summary(lm(VN ~ scale(age) + sex*scale(age), data = pnc))$adj.r.squared, 4)`
+
+Compare GAM and linear model directly:
+
+```{r}
+anova(lm(VN ~ scale(age) + sex*scale(age) + sex, data = pnc), gam_vn)
+```
+
+\pagebreak
+
+## CSF: Linear models by sex
+
+```{r}
+# separate datasets by sex
+pnc_M = filter(pnc, sex == "MALE")
+pnc_F = filter(pnc, sex == "FEMALE")
+
+# Standardize VN
+pnc_M$VN_std = (pnc_M$VN - mean(pnc_M$VN)) / sd(pnc_M$VN)
+pnc_F$VN_std = (pnc_F$VN - mean(pnc_F$VN)) / sd(pnc_F$VN)
+
+# Label VN
+pnc_M$VN_std = set_label(pnc_M$VN_std, label = "CSF (Males)")
+pnc_F$VN_std = set_label(pnc_F$VN_std, label = "CSF (Females)")
+  
+# Prep age2
+age2 = (pnc_M$age - mean(pnc_M$age))^2
+lm_M = lm(VN_std ~ scale(age) + scale(age2), data = pnc_M)
+
+age2 = (pnc_F$age - mean(pnc_F$age))^2
+lm_F = lm(VN_std ~ scale(age) + scale(age2), data = pnc_F)
+
+# Show table (pretty)
+suppressMessages(tab_model(lm_M, lm_F,p.style = "numeric"))
+```
+
+\pagebreak
+
+## CSF: Plot GAM
+
+```{r}
+# Males
+gam_vn_M = mgcv::gam(VN ~ s(age,
+                                k=10,
+                                bs = 'tp'), 
+                    data = filter(pnc, sex == "MALE"),
+                    family = gaussian,
+                    method = 'REML')
+# Females
+gam_vn_F = mgcv::gam(VN ~ s(age,
+                                k=10,
+                                bs = 'tp'), 
+                    data = filter(pnc, sex == "FEMALE"),
+                    family = gaussian,
+                    method = 'REML')
+
+par(mfrow= c(1, 2))
+plot(gam_vn_F, residuals = TRUE, pch = 1, ylab = "raw VN", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_vn_F)[1], main = "Females")
+plot(gam_vn_M, residuals = TRUE, pch = 1, ylab = "raw VN", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_vn_M)[1], main = 'Males')
+```
+
+## Testing GAMs vs Linear models across all 145 ROIs
+
+```{r}
+## ANOVA of all regions
+Ps = matrix(nrow=2, ncol=ncol(rois))
+colnames(Ps) = colnames(rois)
+
+# Linear vs GAM
+l = rois %>% lapply(function(x) anova(lm(x ~ sex + age + age*sex, data = pnc),
+                                      gam(x ~ s(age, by = sex, bs = 'tp') + sex, 
+                                          data = pnc, family = gaussian, method = 'REML')))
+for(j in colnames(rois)) Ps[1,j] = l[[j]]$`Pr(>F)`[2]
+
+p = c(sum(Ps[1,] < 0.05),
+      sum(p.adjust(Ps[1,], method = 'bonferroni') < 0.05),
+      sum(p.adjust(Ps[1,], method = 'fdr') < 0.05))
+names(p) = c("GAM > Linear (No adj.)", "GAM > Linear (Bonferroni)", "GAM > Linear (FDR)")
+p
+```
+
+ROIs where GAM performed better than linear models (FDR adj).
+```{r}
+sig = names(which(p.adjust(Ps[1,], method = 'fdr') < 0.05))
+dict[dict$ROI_INDEX %in% extract_numeric(sig),1:4]
+```
+
+## Explore harmonized data
+
+
+
+
+
+
+
+

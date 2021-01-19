@@ -7,10 +7,10 @@ library(readxl)
 library(dplyr)
 
 ## =============================================CLEAN MSKIDS DATA========================================================
-MSK_demogr_df = readxl::read_xlsx("DATA/Copy of MSKIDS MRI Inventory Penn_10272020.xlsx") # MSKIDS demographics
+MSK_demogr_df = readxl::read_xlsx("data/base/Copy of MSKIDS MRI Inventory Penn_10272020.xlsx") # MSKIDS demographics
 MSK_demogr_df = MSK_demogr_df[-(nrow(MSK_demogr_df):(nrow(MSK_demogr_df)-3)),] # exclude 'legend' rows
 
-MSK_roivol_df = read.csv("DATA/MSKIDS_3.5D_2020_DLICV_N4N4_MUSE_Features_DerivedVolumes.csv") # MSKIDS volumetric data
+MSK_roivol_df = read.csv("data/base/MSKIDS_3.5D_2020_DLICV_N4N4_MUSE_Features_DerivedVolumes.csv") # MSKIDS volumetric data
 
 # Subset demographics healthy controls 
 MSK_HC = MSK_demogr_df %>% 
@@ -61,12 +61,12 @@ MSK_HC = cbind(MSK_HC[!is.na(res$row_matches),], MSK_roivol_df[res$row_matches[!
    
 ## =============================================CLEAN PNC DATA========================================================
 
-PNC_demogr_df = read.csv("DATA/PNC/demographics_from_20160207_dataRelease_update20161114.csv", stringsAsFactors = FALSE)
-PNC_roivol_df = read.csv("DATA/PNC/GO-BBL_muse_dramms+ants_C1.2_Features_DerivedVolumes.csv", stringsAsFactors = FALSE) # PNC volumetric data
+PNC_demogr_df = read.csv("data/base/PNC/demographics_from_20160207_dataRelease_update20161114.csv", stringsAsFactors = FALSE)
+PNC_roivol_df = read.csv("data/base/PNC/GO-BBL_muse_dramms+ants_C1.2_Features_DerivedVolumes.csv", stringsAsFactors = FALSE) # PNC volumetric data
 
 # Load filters
-ltnExclude = read.csv("DATA/PNC/healthexclude_ltn.csv")[, "ltnExclude"]
-t1Exclude = read.csv("DATA/PNC/n1601_t1QaData_v2.csv")[, "t1Exclude"]
+ltnExclude = read.csv("data/base/PNC/healthexclude_ltn.csv")[, "ltnExclude"]
+t1Exclude = read.csv("data/base/PNC/n1601_t1QaData_v2.csv")[, "t1Exclude"]
 
 # Subject-level exclusion and select columns
 PNC = PNC_demogr_df %>% filter(!ltnExclude & !t1Exclude) %>% select(bblid, scanid, ageAtGo1Scan, sex)
@@ -106,11 +106,15 @@ colnames(MSK_HC)[1:4] = c("ID","scanner","site", "age")
 data = rbind(MSK_HC, PNC)
 data$sex = recode(data$sex, `1` = "MALE", `2` = "FEMALE")
 
-saveRDS(data, "data.rds")
-write.csv(data, "HC4harmonization_MSKIDS.csv")
+# Exclude n=7 batch
+data = data[!(data$site == "HSC" & data$scanner == "SIEMENTIMSTRIO"),]
 
-# where the ages calculated in the same way?
-# account for cognitive data!
+# Exclude extra ROIs
+data = data[,c(1:6, 120:ncol(data))]
+
+saveRDS(data, "data/deriv/HC_data.rds")
+write.csv(data, "data/deriv/HC_data.csv", row.names = FALSE)
+
 
 
 
