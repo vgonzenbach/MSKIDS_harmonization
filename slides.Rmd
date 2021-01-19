@@ -23,7 +23,7 @@ library(sjPlot)
 library(sjlabelled)
 
 df = readRDS("data/deriv/HC_data.rds")
-dict = read_xlsx("MUSE_ROI_Dict.xlsx", 1)
+dict = read_xlsx("data/MUSE_ROI_Dict.xlsx", 1)
 
 # Improve readibility for raw ICV
 df$raw.ICV = df$X702
@@ -31,18 +31,9 @@ df$raw.ICV = df$X702
 # Batch
 site = paste(df$site, df$scanner, sep = "-") %>% as.factor()
 
-# Drop  batch with n=7
-df = df[site != "HSC-SIEMENSTIMTRIO", ]
-site = site[site != "HSC-SIEMENSTIMTRIO"]
-site = droplevels(site)
-
 # Pick volumes
 indexes = paste0("X", 1:300)
 indexes = indexes[indexes %in% colnames(df)] # keep indexes that match a column name
-
-# Sex Filters
-M_filter = df$sex == "MALE"
-F_filter = df$sex == "FEMALE"
 
 # Tissue filters
 dict_s = dict[dict$ROI_INDEX %in% 2:300, ]
@@ -50,6 +41,17 @@ VN_filter = dict_s$TISSUE_SEG == "VN"
 GM_filter = dict_s$TISSUE_SEG == "GM"
 WM_filter = dict_s$TISSUE_SEG == "WM"
 ```
+
+## Objectives 
+
+The objective of the current analysis is to examine site (i.e. scanner) effects present in the Intracranial Volume (ICV) and ROI data in Healthy Controls, and present the results of harmonizing these data with ComBat.
+
+Working hypotheses:
+
+1. The ROI data and ICV data show site effects
+2. ComBat, if appropriately applied, will mitigate these site effects
+3. ComBat, if appropriately applied, will mitigate site effects on ROI data.
+
 
 ## Scanners and Sites
 
@@ -67,17 +69,26 @@ table(df$scanner, df$site)
 Excluding HSC-SIEMENSTIMTRIO (n=7) for now.
 
 ```{r, echo=FALSE}
+# Drop  batch with n=7
+df = df[site != "HSC-SIEMENSTIMTRIO", ]
+site = site[site != "HSC-SIEMENSTIMTRIO"]
+site = droplevels(site)
+
+# Sex Filters
+M_filter = df$sex == "MALE"
+F_filter = df$sex == "FEMALE"
+
 print("Site-Scanner Pairs:");levels(site)
 ```
 
-## Plot: Age
+## Age across Sites
 
 ```{r}
 df %>% ggplot(aes(x=site, y=age, color = site)) + geom_boxplot() 
 ```
 
 
-## ANOVA: Age
+## Age across Sites
 
 ```{r}
 anova(lm(age~site, data = df))
@@ -85,7 +96,7 @@ anova(lm(age~site, data = df))
 
 Average age differs across sites.
 
-## Plot: Sex
+## Sex across Sites
 ```{r}
 # Age by sex distr
 p = df %>% ggplot(aes(x= sex, color=sex, y=age)) + 
@@ -94,7 +105,7 @@ p = df %>% ggplot(aes(x= sex, color=sex, y=age)) +
 change_palette(p, palette = "npg")
 ```
 
-## Model: Sex
+## Sex across Sites
 
 ```{r}
 table(df$site, df$sex)
@@ -106,102 +117,35 @@ chisq.test(df$site, df$sex)
 
 1. Harmonization of **intracranial volume (ICV).**  
 
-2. Harmonization of **145** volumes  
+2. Harmonization of **145** ROIs.  
 
-3. ICV Normalization of 145 volumes  
+3. ICV-correction on ROI volumes.
 
 Harmonization method: ComBat (@Johnson2007c, @Fortin2017c, -@Fortin2018c).
 
-## Layout: Options 
-
-1. Harmonization of **intracranial volume (ICV).**  
-    A. As single dataset.  
-    B. **By Splitting data by Males and Females (M/F).**  
-
-2. Harmonization of **145** volumes  
-    A. As single dataset.  
-    B. **By splitting data by Males and Females (M/F).**  
-    C. By splitting data by tissues (Tissue).  
-    D. B + C.  
-    
-3. ICV Normalization of 145 volumes  
-    A. No adjustment.  
-    B. ICV Residualization: Splitting data by Males and Females (M/F).  
-    C. ICV Residualization: Joint (i.e. no M/F split).  
-    D. ICV as Covariate.  
-
-## ICV (Raw)
+## Raw ICV across Sites
 
 ```{r}
 df %>% ggplot(aes(x = site, y = raw.ICV, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex)
 ```
 
-## ICV ~ Age [PNC]
-```{r}
-pnc = df %>% filter(site == "PNC")
-p = pnc %>% ggplot(aes(x = age, y = raw.ICV, col=sex)) + geom_point() + geom_smooth(method = "lm") + ylab("ICV") + facet_wrap(~sex)
-suppressMessages(print(change_palette(p, palette = "npg"))) 
-```
-
-## Model: ICV ~ Age [PNC]
-
-```{r}
-## Std ICV -> Label ICV -> Prep Age2 -> Model
-# PNC
-pnc$raw.ICV_std = (pnc$raw.ICV - mean(pnc$raw.ICV)) / sd(pnc$raw.ICV)
-pnc$raw.ICV_std = set_label(pnc$raw.ICV_std, "ICV")
-pnc$age2 = (pnc$age - mean(pnc$age))^2
-lm0 = lm(raw.ICV_std ~scale(age) + sex + scale(age2), data=pnc)
-
-# Males
-pnc_M = pnc %>% filter(sex == "MALE")
-pnc_M$raw.ICV_std = (pnc_M$raw.ICV - mean(pnc_M$raw.ICV)) / sd(pnc_M$raw.ICV)
-pnc_M$raw.ICV_std = set_label(pnc_M$raw.ICV_std, "ICV [M]")
-pnc_M$age2 = (pnc_M$age - mean(pnc_M$age))^2
-lm1 = lm(raw.ICV_std ~scale(age) + scale(age2), data=pnc_M)
-
-# Females
-pnc_F = pnc %>% filter(sex == "FEMALE")
-pnc_F$raw.ICV_std = (pnc_F$raw.ICV - mean(pnc_F$raw.ICV)) / sd(pnc_F$raw.ICV)
-pnc_F$raw.ICV_std = set_label(pnc_F$raw.ICV_std, "ICV [F]")
-pnc_F$age2 = (pnc_F$age - mean(pnc_F$age))^2
-lm2 = lm(raw.ICV_std ~scale(age) + scale(age2), data=pnc_F)
-
-## Males: Age 2
-suppressMessages(tab_model(lm0, lm1, lm2, show.ci = FALSE, p.style = "asterisk"))
-```
-
-## Model: ICV ~ Age [PNC, Males]
-
-```{r}
-pnc_M = pnc %>% filter(sex == "MALE")
-pnc_M$raw.ICV_std = (pnc_M$raw.ICV - mean(pnc_M$raw.ICV)) / sd(pnc_M$raw.ICV)
-pnc_M$raw.ICV_std = set_label(pnc_M$raw.ICV_std, "ICV [M]")
-lm1 = lm(raw.ICV_std ~scale(age), data=pnc_M)
-suppressMessages(tab_model(lm1))
-
-pnc_F = pnc %>% filter(sex == "FEMALE")
-pnc_F$raw.ICV_std = (pnc_F$raw.ICV - mean(pnc_F$raw.ICV)) / sd(pnc_F$raw.ICV)
-pnc_F$raw.ICV_std = set_label(pnc_F$raw.ICV_std, "ICV [F]")
-lm2 = lm(raw.ICV_std ~scale(age), data=pnc_F)
-suppressMessages(tab_model(lm2))
-```
-
-## Model: ICV ~ Age [PNC, Females]
-
-```{r}
-pnc$raw.ICV_std = (pnc$raw.ICV - mean(pnc$raw.ICV)) / sd(pnc$raw.ICV)
-pnc$raw.ICV_std = set_label(pnc$raw.ICV_std, "ICV")
-lm0 = lm(raw.ICV_std ~scale(age), data=pnc)
-suppressMessages(tab_model(lm0))
-```
-
-
-## site contribution
+## Site effects in Raw ICV
 ```{r}
 # anova comparison
 anova(lm(raw.ICV ~ sex + age + age*sex, data=df), lm(raw.ICV ~ sex + age + age*sex + site, data=df))
 ```
+
+Site variable contributes (unwanted) additional information to the baseline model. 
+
+## Harmonizing ICV
+
+The following procedures were implemented for harmonizing ICV
+(1) Harmonization on the whole dataset at once.
+(2) Harmonization on males and females separately.
+(3) Harmonization on gray matter, white matter, CSF and 
+(4) A combination of (2) and (3)
+
+Of all procedures, (2) gave the best results.
 
 ```{r include=FALSE}
 # Harmonize ICV
@@ -220,11 +164,12 @@ library(neuroCombat)
 
 # Males
 mod_M = model.matrix(~ age, data = df[M_filter,])
-ICV_M = neuroCombat::neuroCombat(dat = t(df$raw.ICV[M_filter]), 
-                                       batch = site[M_filter], 
-                                       mod = mod_M,
-                                       eb = FALSE,
-                                       parametric=TRUE)
+ICV_M = neuroCombat::neuroCombat(dat = t(df$raw.ICV[M_filter]),
+                                 batch = site[M_filter], 
+                                 mod = mod_M,
+                                 eb = FALSE,
+                                 parametric = TRUE,
+                                 ref.batch = "PNC-SIEMENSTIMTRIO")
 
 # Females
 mod_F = model.matrix(~ age, data = df[F_filter,])
@@ -235,60 +180,51 @@ ICV_F = neuroCombat::neuroCombat(dat = t(df$raw.ICV[F_filter]),
                                        parametric=TRUE)
 
 
-ICV_MF = ICV
+ICV = numeric(nrow(df))
 
-ICV_MF[M_filter] = t(ICV_M$dat.combat)
-ICV_MF[F_filter] = t(ICV_F$dat.combat)
+ICV[M_filter] = t(ICV_M$dat.combat)
+ICV[F_filter] = t(ICV_F$dat.combat)
+
+df$ICV = ICV
 ```
 
 ## Harmonized ICV 
 ```{r}
 # Visualize ICV All and MF
-p_all = df %>% ggplot(aes(x = site, y = ICV, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("All")
-p_MF = df %>% ggplot(aes(x = site, y = ICV_MF, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("M/F")
+p_raw = df %>% ggplot(aes(x = site, y = raw.ICV, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("Raw")
+p_combat = df %>% ggplot(aes(x = site, y = ICV, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("ComBat")
 
-ggarrange(p_all, p_MF, nrow = 1, common.legend = TRUE, legend = "bottom")
-
-# M/F split is the best harmonization for ICV
-ICV = ICV_MF
+ggarrange(p_raw, p_combat, nrow = 1, common.legend = TRUE, legend = "bottom")
 ```
 
-## Harmonized ICV (adj. for sex)
+## Harmonized ICV (adj. for sex and age)
 
 ```{r}
 # Visualize ICV All and MF
-p_all = df %>% ggplot(aes(x = site, y = resid(lm(ICV~ age + sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("All")
-p_MF = df %>% ggplot(aes(x = site, y = resid(lm(ICV_MF ~ age + sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("M/F")
+p_raw = df %>% ggplot(aes(x = site, y = resid(lm(raw.ICV ~ age + sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("Raw")
+p_combat = df %>% ggplot(aes(x = site, y = resid(lm(ICV ~ age + sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("ComBat")
 
-ggarrange(p_all, p_MF, nrow = 1, common.legend = TRUE, legend = "bottom")
+ggarrange(p_raw, p_combat, nrow = 1, common.legend = TRUE, legend = "bottom")
 ```
 
-## Harmonized ICV (adj. for age)
+Sex and age adjustment shows the desirable result in the harmonized ICV:  
+Sex differences in ICV are eliminated while ICV across sites remain equal.
+
+## Note: ICV-age relationship is negligible
 
 ```{r}
-# Visualize ICV All and MF
-p_all = df %>% ggplot(aes(x = site, y = resid(lm(ICV~ age)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("All")
-p_MF = df %>% ggplot(aes(x = site, y = resid(lm(ICV_MF ~ age)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("M/F")
-
-ggarrange(p_all, p_MF, nrow = 1, common.legend = TRUE, legend = "bottom")
+p = df %>% filter(site == "PNC") %>% ggplot(aes(x=age, y=ICV, color=sex)) + geom_point() + geom_smooth(method="gam") + facet_wrap(~sex)
+suppressMessages(print(change_palette(p, "npg")))
 ```
 
-
-## Harmonized ICV (adj. for age, sex)
-
-```{r}
-# Visualize ICV All and MF
-p_all = df %>% ggplot(aes(x = site, y = resid(lm(ICV~ age + sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("All")
-p_MF = df %>% ggplot(aes(x = site, y = resid(lm(ICV_MF ~ age + sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("M/F")
-
-ggarrange(p_all, p_MF, nrow = 1, common.legend = TRUE, legend = "bottom")
-```
 
 ## Scanner contribution
 
 ```{r}
-anova(lm(ICV ~ sex + age + sex*age, data=df), lm(ICV ~ sex + age + age*sex + site, data=df))
+anova(lm(ICV ~ sex + age + sex*age, data=df), lm(ICV ~ sex + age + sex*age + site, data=df))
 ```
+
+Site/scanner no longer contributes to model improvement: Success!
 
 ## ICV Harmonization choice
 
@@ -551,8 +487,8 @@ Past this point, all reference to ROI refers refers to ROIs harmonized by splitt
 ## ANOVAs: M/F split harmonization
 
 For each of the 145 ROI volumes, two models were used:   
-- Model 1: ROI ~ sex + age + age**x**sex (+ ICV)  
-- Model 2: ROI ~ sex + age + age**x**sex (+ ICV) + scanner
+- Model 1: ROI ~ sex + age + age **x** sex (+ ICV)  
+- Model 2: ROI ~ sex + age + age **x** sex (+ ICV) + scanner
 
 Number of models for which scanner variables contributes new information is shown below.
 
@@ -654,57 +590,6 @@ data = data.frame(pc1 = resPCA$ind$coord[,1],
                   sex = df$sex,
                   age = df$age)
 ```
-
-## PCA: Scree
-
-(Covariance) PCA was performed with (M/F) ICV-corrected volumes. Then GM and WM totals were projected onto PCs 1 and 2.
-
-```{r}
-fviz_screeplot(resPCA, ncp=30)
-```
-
-## PCA: Loadings
-```{r pca_12}
-# Variables
-plot.PCA(resPCA, choix = "var", axes=c(1,2), cex = 0.6, autoLab = "yes")
-```
-
-## PCA: Contributions
-
-Dimension 1
-```{r}
-get_ctr(resPCA, dim = 1)
-```
-
-Dimension 2
-
-```{r}
-get_ctr(resPCA, dim = 2)
-```
-
-## PCA: Circle of Correlations
-```{r}
-plot.PCA(resPCA_sup, choix = "varcor", axes=c(1,2), cex = 0.5, autoLab = "yes")
-```
-
-Note: Blue lines denote supplementary projections.
-
-## PCA: Factor Scores
-```{r}
-fviz_pca_ind(resPCA, choix = "ind", geom = "point", alpha.ind = 0.5, col.ind = harmon_df$sex)
-```
-
-Sex differences are retained after ICV-residualizing by sex (M/F Residualization).
-
-## PCA: (Whole-Data ICV adj.)
-
-```{r}
-p1 = fviz_pca_ind(resPCA_1b, choix = "ind", geom = "point", alpha.ind = 0.4, col.ind = harmon_df$sex)
-p2 = fviz_pca_var(resPCA_1b, choix = "var", axes=c(1,2), col.var = "steelblue",cex = 0.4)
-ggarrange(p2, p1, nrow = 1)
-```
-
-Alternatively, GM loses contr. toward Dim 2 and sex differences are eliminated if ICV is residualized irrespective of sex (i.e. Joint Residualization).
 
 ## Plot: WM (unadj.) ~ Age
 ```{r}
