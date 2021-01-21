@@ -24,14 +24,9 @@ library(psych)
 library(stargazer)
 library(pander)
 library(ggpubr)
-library(sjPlot)
-library(sjlabelled)
 
 df = read.csv("data/deriv/HC_data.csv", stringsAsFactors = TRUE)
 dict = read_xlsx("data/MUSE_ROI_Dict.xlsx", 1)
-
-# Improve readibility for raw ICV
-colnames(df)[6] = "raw.ICV"
 
 # Shorten Dictionary
 dict = dict[dict$ROI_INDEX %in% 2:300, ]
@@ -49,6 +44,13 @@ rois = pnc[, 7:ncol(pnc)]
 pnc$WM = rowSums(rois[, WM_filter])
 pnc$GM = rowSums(rois[, GM_filter])
 pnc$CSF = rowSums(rois[, VN_filter])
+
+# Improve readability for ICV
+pnc$raw.ICV = pnc$X702
+
+# Separate datasets by sex
+pnc_M = filter(pnc, sex == "MALE")
+pnc_F = filter(pnc, sex == "FEMALE")
 
 # Parameters for GAMs
 K = 4
@@ -106,7 +108,7 @@ gam_icv_M = mgcv::gam(raw.ICV ~ s(age,
                                   k=K,
                                   bs = 'tp', 
                                   fx=FX), 
-                    data = filter(pnc, sex == "MALE"),
+                    data = pnc_M,
                     family = gaussian,
                     method = 'REML')
 # Females
@@ -114,13 +116,13 @@ gam_icv_F = mgcv::gam(raw.ICV ~ s(age,
                                 k=K,
                                 bs = 'tp',
                                 fx=FX), 
-                    data = filter(pnc, sex == "FEMALE"),
+                    data = pnc_F,
                     family = gaussian,
                     method = 'REML')
 
 par(mfrow= c(1, 2))
-plot(gam_icv_F, residuals = TRUE, pch = 1, main = "Females", ylab = "raw ICV", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_icv_M)[1])
-plot(gam_icv_M, residuals = TRUE, pch = 1, cex = 0.75, ylab = "raw ICV", shade = TRUE, seWithMean = TRUE, shift = coef(gam_icv_F)[1], main = 'Males')
+plot(gam_icv_F, residuals = TRUE, pch = 1, main = "Females", ylab = "ICV", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_icv_M)[1])
+plot(gam_icv_M, residuals = TRUE, pch = 1, cex = 0.75, ylab = "ICV", shade = TRUE, seWithMean = TRUE, shift = coef(gam_icv_F)[1], main = 'Males')
 ```
 
 ## ICV: GAM summary
@@ -146,10 +148,6 @@ anova(lm(raw.ICV ~ scale(age) + sex*scale(age) + sex, data = pnc), gam_icv)
 ## ICV: Linear Models by Sex
 
 ```{r, results='asis'}
-# separate datasets by sex
-pnc_M = filter(pnc, sex == "MALE")
-pnc_F = filter(pnc, sex == "FEMALE")
-
 # Standardize raw.ICV
 pnc_M$raw.ICV_std = (pnc_M$raw.ICV - mean(pnc_M$raw.ICV)) / sd(pnc_M$raw.ICV)
 pnc_F$raw.ICV_std = (pnc_F$raw.ICV - mean(pnc_F$raw.ICV)) / sd(pnc_F$raw.ICV)
@@ -378,18 +376,10 @@ anova(lm(CSF ~ scale(age) + sex*scale(age) + sex, data = pnc), gam_vn)
 ## CSF: Linear models by sex
 
 ```{r, results='asis'}
-# separate datasets by sex
-pnc_M = filter(pnc, sex == "MALE")
-pnc_F = filter(pnc, sex == "FEMALE")
-
 # Standardize CSF
 pnc_M$CSF_std = (pnc_M$CSF - mean(pnc_M$CSF)) / sd(pnc_M$CSF)
 pnc_F$CSF_std = (pnc_F$CSF - mean(pnc_F$CSF)) / sd(pnc_F$CSF)
 
-# Label CSF
-pnc_M$CSF_std = set_label(pnc_M$CSF_std, label = "CSF (Males)")
-pnc_F$CSF_std = set_label(pnc_F$CSF_std, label = "CSF (Females)")
-  
 # Prep age2
 age2 = (pnc_M$age - mean(pnc_M$age))^2
 lm_M = lm(CSF_std ~ scale(age) + scale(age2), data = pnc_M)
