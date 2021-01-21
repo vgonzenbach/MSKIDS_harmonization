@@ -112,7 +112,6 @@ data = data[!(data$site == "HSC" & data$scanner == "SIEMENTIMSTRIO"),]
 # Exclude extra ROIs
 data = data[,c(1:6, 120:ncol(data))]
 
-saveRDS(data, "data/deriv/HC_data.rds")
 write.csv(data, "data/deriv/HC_data.csv", row.names = FALSE)
 
 

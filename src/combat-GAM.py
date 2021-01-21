@@ -63,7 +63,7 @@ data_F_adj = pd.concat([data_F.iloc[:, :5],
 data_adj = pd.concat([data_M_adj, data_F_adj], axis=0).sort_index()
 
 # save adjusted DataFrame as .csv
-data_adj.to_csv('data/deriv/HC_data_adj-ComBat-GAM.csv')
+data_adj.to_csv('data/deriv/HC_data_adj-ComBat-GAM.csv', index=False)
 
 # save models for later use
 with open('results/models/ComBat-GAM_icv_M', mode = 'wb') as file:

@@ -2,19 +2,17 @@
 library(neuroCombat)
 library(dplyr)
 
-df = readRDS('data/deriv/HC_data.rds')
+df = read.csv('data/deriv/HC_data.csv', stringsAsFactors = TRUE)
 M_filter = df$sex == "MALE"
 F_filter = df$sex == "FEMALE"
 
-colnames(df)[6] = "ICV"
-df$site = as.factor(df$site)
-
+# Prepare data frame for adjusted data
 df_adj = df
-df_adj[,6:ncol(df_adj)] = matrix(nrow = 1286, ncol = 146)
+df_adj[,6:ncol(df_adj)] = matrix(nrow = 1286, ncol = 146) # Keep only covariates
 
-# Combat Harmonization Step 1
+# Combat Harmonization Step 1: ICV (i.e. X702)
 mod_M = model.matrix(~ age, data = df[M_filter,])
-ICV_M = neuroCombat::neuroCombat(dat = t(df$ICV[M_filter]),
+ICV_M = neuroCombat::neuroCombat(dat = t(df$X702[M_filter]),
                                  batch = df$site[M_filter], 
                                  mod = mod_M,
                                  eb = FALSE,
@@ -22,19 +20,19 @@ ICV_M = neuroCombat::neuroCombat(dat = t(df$ICV[M_filter]),
                                  ref.batch = "PNC")
 
 mod_F = model.matrix(~ age, data = df[F_filter,])
-ICV_F = neuroCombat::neuroCombat(dat = t(df$ICV[F_filter]), 
+ICV_F = neuroCombat::neuroCombat(dat = t(df$X702[F_filter]), 
                                  batch = df$site[F_filter], 
                                  mod = mod_F,
                                  eb = FALSE,
                                  parametric=TRUE,
                                  ref.batch = "PNC")
 
-df_adj$ICV[M_filter] = t(ICV_M$dat.combat)
-df_adj$ICV[F_filter] = t(ICV_F$dat.combat)
+df_adj$X702[M_filter] = t(ICV_M$dat.combat)
+df_adj$X702[F_filter] = t(ICV_F$dat.combat)
 
 
-## ComBat Harmonization Step 2
-mod_M = model.matrix(~ age + ICV, data = df[M_filter,])
+## ComBat Harmonization Step 2: Use covariates from adjusted data (including ICV)
+mod_M = model.matrix(~ age + X702, data = df_adj[M_filter,])
 resCombat_M = neuroCombat::neuroCombat(dat = t(df[M_filter, 7:ncol(df)]), 
                                        batch = df$site[M_filter], 
                                        mod = mod_M,
@@ -42,7 +40,7 @@ resCombat_M = neuroCombat::neuroCombat(dat = t(df[M_filter, 7:ncol(df)]),
                                        parametric= TRUE,
                                        ref.batch = "PNC")
 
-mod_F = model.matrix(~ age + ICV, data = df[F_filter,])
+mod_F = model.matrix(~ age + X702, data = df_adj[F_filter,])
 resCombat_F = neuroCombat::neuroCombat(dat = t(df[F_filter, 7:ncol(df)]), 
                                        batch = df$site[F_filter], 
                                        mod = mod_F,
