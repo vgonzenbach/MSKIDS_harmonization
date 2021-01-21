@@ -52,7 +52,7 @@ df_adj[M_filter, 7:ncol(df_adj)] = t(resCombat_M$dat.combat)
 df_adj[F_filter, 7:ncol(df_adj)] = t(resCombat_F$dat.combat)
 
 # Save adjusted data
-write.csv(df_adj, 'data/deriv/HC_data_adj-ComBat-Linear.csv')
+write.csv(df_adj, 'data/deriv/HC_data_adj-ComBat-Linear.csv', row.names = FALSE)
 
 # Save models
 saveRDS(ICV_M, 'results/models/ComBat-Linear_ICV_M.rds')
