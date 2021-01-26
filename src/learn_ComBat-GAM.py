@@ -1,18 +1,21 @@
+import os
 import numpy as np
 import pandas as pd
 from neuroHarmonize import harmonizationLearn
 import pickle
-import openpyxl
 
-# load and split data by sex
-data = pd.read_csv('data/deriv/HC_data.csv')
+MODELS_DIR = os.path.abspath(os.path.join('', '..', 'results/models'))
+DATA_DIR = os.path.abspath(os.path.join('', '..', 'data/deriv'))
+
+# Load and split data by sex
+data = pd.read_csv(os.path.join(DATA_DIR, 'HC_data.csv'))
 is_male = (data['sex'] == 'MALE').to_list()
 is_female = np.logical_not(is_male)
 
 data_M = data[is_male]
 data_F = data[is_female]
 
-## Prepare covariates
+# Prepare covariates
 covars_M = data_M.iloc[:, 2:4] # select site and age
 covars_M.columns = ['SITE', 'AGE']
 covars_F = data_F.iloc[:, 2:4] # select site and age
@@ -66,11 +69,11 @@ data_adj = pd.concat([data_M_adj, data_F_adj], axis=0).sort_index()
 data_adj.to_csv('data/deriv/HC_data_adj-ComBat-GAM.csv', index=False)
 
 # save models for later use
-with open('results/models/ComBat-GAM_icv_M', mode = 'wb') as file:
+with open(os.path.join(MODELS_DIR, 'ComBat-GAM_icv_M'), mode = 'wb') as file:
     pickle.dump(mod_icv_M, file)
-with open('results/models/ComBat-GAM_icv_F', mode = 'wb') as file:
+with open(os.path.join(MODELS_DIR, 'ComBat-GAM_icv_F'), mode = 'wb') as file:
     pickle.dump(mod_icv_F, file)
-with open('results/models/ComBat-GAM_rois_M', mode = 'wb') as file:
+with open(os.path.join(MODELS_DIR, 'ComBat-GAM_rois_M'), mode = 'wb') as file:
     pickle.dump(mod_rois_M, file)    
-with open('results/models/ComBat-GAM_rois_F', mode = 'wb') as file:
+with open(os.path.join(MODELS_DIR, 'ComBat-GAM_rois_F'), mode = 'wb') as file:
     pickle.dump(mod_rois_F, file)

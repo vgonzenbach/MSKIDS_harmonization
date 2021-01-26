@@ -18,9 +18,6 @@ MS %>% colnames
 # Exclude unused sites
 MS = MS[MS$`Site of Acquisition` %in% c("CHP", "HSC"),]
 
-# Check consistency between site and scanner
-table(MS$Scanner, MS$`Site of Acquisition`) # Consistent
-
 # Match demographics table with volumes
 res = match_obs(ref_id = paste0(MS$`Study ID`, "-", tolower(MS$Visit)), target_id = MSK_roivol_df$ID)
 
@@ -31,5 +28,11 @@ MS_data = cbind(MS[!is.na(res$row_matches),], # select rows where there was a ma
 MS_data = MS_data[, c(1:5, 8, 122:266)]
 
 colnames(MS_data)[1:5] = c("ID", "scanner", "site", "age", "sex")
+
+# Check consistency between site and scanner
+table(MS_data$scanner, MS_data$site)
+
+# Delete n=18 HSC-SIEMENSTIMTRIO
+MS_data = MS_data[!(MS_data$site == "HSC" & MS_data$scanner == "SIEMENSTIMTRIO"),]
 
 write.csv(MS_data, 'data/deriv/MS_data.csv', row.names = FALSE)
