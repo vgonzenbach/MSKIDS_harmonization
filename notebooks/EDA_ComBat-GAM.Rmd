@@ -1,0 +1,216 @@
+---
+title: "EDA_ComBat-GAM"
+author: "Virgilio Gonzenbach"
+date: "1/22/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      cache = TRUE, 
+                      cache.path = 'cache/EDA_ComBat-GAM/', 
+                      fig.path = "figures/EDA_ComBat-GAM/")
+knitr::opts_knit$set(root.dir = '../')
+```
+
+# Explore harmonized data
+
+```{r}
+library(ggplot2)
+
+# Load data
+df_lin_adj = read.csv('data/deriv/HC_data_adj-ComBat-Linear.csv', stringsAsFactors = TRUE)
+df_gam_adj = read.csv('data/deriv/HC_data_adj-ComBat-GAM.csv', stringsAsFactors = TRUE)
+
+# Rename ICV for readibility
+df_lin_adj$ICV = df_lin_adj$X702
+df_gam_adj$ICV = df_gam_adj$X702
+
+# Compute aggregate ROIs
+rois = df_lin_adj[, 7:ncol(df_lin_adj)]
+df_lin_adj$WM = rowSums(rois[, WM_filter])
+df_lin_adj$GM = rowSums(rois[, GM_filter])
+df_lin_adj$CSF = rowSums(rois[, VN_filter])
+
+rois = df_gam_adj[, 7:ncol(df_gam_adj)]
+df_gam_adj$WM = rowSums(rois[, WM_filter])
+df_gam_adj$GM = rowSums(rois[, GM_filter])
+df_gam_adj$CSF = rowSums(rois[, VN_filter])
+```
+
+## ICV: Linear vs GAM
+
+```{r}
+# Boxplots
+p_lin = df_lin_adj %>% ggplot(aes(x = site, y = X702, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("Linear harmonization")
+p_gam = df_gam_adj %>% ggplot(aes(x = site, y = X702, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("GAM harmonization")
+ggarrange(p_lin, p_gam, nrow = 1, common.legend = TRUE, legend = "bottom")
+```
+
+## ICV: Linear vs GAM (adj for sex and age)
+
+```{r}
+# Visualize ICV All and MF
+p_lin = df_lin_adj %>% ggplot(aes(x = site, y = resid(lm(X702 ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("Linear harmonization")
+p_gam = df_gam_adj %>% ggplot(aes(x = site, y = resid(lm(X702 ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("GAM harmonization")
+ggarrange(p_lin, p_gam, nrow = 1, common.legend = TRUE, legend = "bottom")
+```
+
+## ICV: Contribution of site after adjustment
+
+Linear ComBat:  
+```{r}
+anova(lm(ICV ~ sex + age + sex*age, data=df_lin_adj), lm(ICV ~ sex + age + sex*age + site, data=df_lin_adj))
+```
+
+ComBat-GAM:   
+```{r}
+anova(lm(ICV ~ sex + age + sex*age, data=df_gam_adj), lm(ICV ~ sex + age + sex*age + site, data=df_gam_adj))
+```
+
+\pagebreak
+
+## Brain Stem: Linear vs GAM
+
+```{r}
+# Boxplots
+p_lin = df_lin_adj %>% ggplot(aes(x = site, y = X35, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("Linear harmonization")
+p_gam = df_gam_adj %>% ggplot(aes(x = site, y = X35, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("GAM harmonization")
+ggarrange(p_lin, p_gam, nrow = 1, common.legend = TRUE, legend = "bottom")
+```
+
+## Brain Stem: Linear vs GAM (adj for sex and age)
+
+```{r}
+# Visualize ICV All and MF
+p_lin = df_lin_adj %>% ggplot(aes(x = site, y = resid(lm(X35 ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("Linear harmonization")
+p_gam = df_gam_adj %>% ggplot(aes(x = site, y = resid(lm(X35 ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("GAM harmonization")
+ggarrange(p_lin, p_gam, nrow = 1, common.legend = TRUE, legend = "bottom")
+```
+
+## Brain Stem: Contribution of site after adjustment
+
+Brain Stem ROI Code: X35
+
+Linear ComBat:  
+```{r}
+anova(lm(X35 ~ sex + age + sex*age, data=df_lin_adj), lm(X35 ~ sex + age + sex*age + site, data=df_lin_adj))
+```
+
+ComBat-GAM:   
+```{r}
+anova(lm(X35 ~ sex + age + sex*age, data=df_gam_adj), lm(X35 ~ sex + age + sex*age + site, data=df_gam_adj))
+```
+
+## WM: Linear vs GAM
+
+```{r}
+# Boxplots
+p_lin = df_lin_adj %>% ggplot(aes(x = site, y = WM, color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("Linear harmonization")
+p_gam = df_gam_adj %>% ggplot(aes(x = site, y = WM, color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("GAM harmonization")
+ggarrange(p_lin, p_gam, nrow = 1, common.legend = TRUE, legend = "bottom")
+```
+
+\pagebreak
+
+## WM: Linear vs GAM
+
+```{r}
+# Boxplots
+p_lin = df_lin_adj %>% ggplot(aes(x = site, y = WM, color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("Linear harmonization")
+p_gam = df_gam_adj %>% ggplot(aes(x = site, y = WM, color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("GAM harmonization")
+ggarrange(p_lin, p_gam, nrow = 1, common.legend = TRUE, legend = "bottom")
+```
+
+## WM: Linear vs GAM (adj for sex and age)
+
+```{r}
+# Visualize ICV All and MF
+p_lin = df_lin_adj %>% ggplot(aes(x = site, y = resid(lm(WM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("Linear harmonization")
+p_gam = df_gam_adj %>% ggplot(aes(x = site, y = resid(lm(WM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("GAM harmonization")
+ggarrange(p_lin, p_gam, nrow = 1, common.legend = TRUE, legend = "bottom")
+```
+
+## WM: Contribution of site after adjustment
+
+Linear ComBat:  
+```{r}
+anova(lm(WM ~ sex + age + sex*age, data=df_lin_adj), lm(WM ~ sex + age + sex*age + site, data=df_lin_adj))
+```
+
+ComBat-GAM:   
+```{r}
+anova(lm(WM ~ sex + age + sex*age, data=df_gam_adj), lm(WM ~ sex + age + sex*age + site, data=df_gam_adj))
+```
+
+## GM: Linear vs GAM
+
+```{r}
+# Boxplots
+p_lin = df_lin_adj %>% ggplot(aes(x = site, y = GM, color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("Linear harmonization")
+p_gam = df_gam_adj %>% ggplot(aes(x = site, y = GM, color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("GAM harmonization")
+ggarrange(p_lin, p_gam, nrow = 1, common.legend = TRUE, legend = "bottom")
+```
+
+## GM: Linear vs GAM (adj for sex and age)
+
+```{r}
+# Visualize ICV All and MF
+p_lin = df_lin_adj %>% ggplot(aes(x = site, y = resid(lm(GM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("Linear harmonization")
+p_gam = df_gam_adj %>% ggplot(aes(x = site, y = resid(lm(GM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("GAM harmonization")
+ggarrange(p_lin, p_gam, nrow = 1, common.legend = TRUE, legend = "bottom")
+```
+
+## GM: Contribution of site after adjustment
+
+Linear ComBat:  
+```{r}
+anova(lm(GM ~ sex + age + sex*age, data=df_lin_adj), lm(GM ~ sex + age + sex*age + site, data=df_lin_adj))
+```
+
+ComBat-GAM:   
+```{r}
+anova(lm(GM ~ sex + age + sex*age, data=df_gam_adj), lm(GM ~ sex + age + sex*age + site, data=df_gam_adj))
+```
+
+## CSF: Linear vs GAM
+
+```{r}
+# Boxplots
+p_lin = df_lin_adj %>% ggplot(aes(x = site, y = CSF, color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("Linear harmonization")
+p_gam = df_gam_adj %>% ggplot(aes(x = site, y = CSF, color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("GAM harmonization")
+ggarrange(p_lin, p_gam, nrow = 1, common.legend = TRUE, legend = "bottom")
+```
+
+## CSF: Linear vs GAM (adj for sex and age)
+
+```{r}
+# Visualize ICV All and MF
+p_lin = df_lin_adj %>% ggplot(aes(x = site, y = resid(lm(CSF ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("Linear harmonization")
+p_gam = df_gam_adj %>% ggplot(aes(x = site, y = resid(lm(CSF ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("GAM harmonization")
+ggarrange(p_lin, p_gam, nrow = 1, common.legend = TRUE, legend = "bottom")
+```
+
+## CSF: Contribution of site after adjustment
+
+Linear ComBat:  
+```{r}
+anova(lm(CSF ~ sex + age + sex*age, data=df_lin_adj), lm(CSF ~ sex + age + sex*age + site, data=df_lin_adj))
+```
+
+ComBat-GAM:   
+```{r}
+anova(lm(CSF ~ sex + age + sex*age, data=df_gam_adj), lm(CSF ~ sex + age + sex*age + site, data=df_gam_adj))
+```
+
+## Difference between harmonizations
+
+Linear - GAM
+```{r}
+avg_diff = colMeans(df_lin_adj[,7:ncol(df_lin_adj)] - df_gam_adj[,7:ncol(df_gam_adj)])
+sort(avg_diff)
+```
+
+
+
+
