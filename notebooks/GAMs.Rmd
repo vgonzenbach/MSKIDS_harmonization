@@ -42,6 +42,7 @@ WM_filter = dict$TISSUE_SEG == "WM"
 
 # Select PNC dataset
 pnc = df %>% filter(site == "PNC") 
+pnc$age2 =  age - mean(age)^2
 
 # Aggregate ROIs
 rois = pnc[, 7:ncol(pnc)]
@@ -139,6 +140,42 @@ sig_rois = names(which(p.adjust(Ps[1,], method = 'fdr') < 0.05))
 dict[dict$ROI_INDEX %in% parse_number(sig_rois),1:4] %>% pander()
 ```
 
+## Comparison Linear models with and without quadratic term (within each sex)
+
+-Model 1: $ROI = age + age^2$
+-Model 2: $ROI = sex + s(age, by = sex)$, where s() denotes the smooth function(s) fitted separately within each sex.
+
+### Males
+
+Number of regions for which models (GAM and linear model) significantly differed:  
+
+```{r}
+## ANOVA of all regions
+Ps = matrix(nrow=2, ncol=ncol(rois))
+colnames(Ps) = colnames(rois)
+
+# Linear vs GAM
+l = rois %>% lapply(function(x){} anova(lm(x ~ age, data = filter(pnc, sex == "MALE")),
+                                      lm(x ~ age + (age - mean(age))^2, data = filter(pnc, sex == "MALE"))
+                                      )
+)
+
+for(j in colnames(rois)) Ps[1,j] = l[[j]]$`Pr(>F)`[2]
+
+p = c(sum(Ps[1,] < 0.05),
+      sum(p.adjust(Ps[1,], method = 'bonferroni') < 0.05),
+      sum(p.adjust(Ps[1,], method = 'fdr') < 0.05))
+names(p) = c("GAM != Linear (No adj.)", "GAM != Linear (Bonferroni)", "GAM != Linear (FDR)")
+p
+```
+
+ROIs where quadratic term improved the model (adjusted for False Discovery Rate): 
+
+```{r}
+sig_rois = names(which(p.adjust(Ps[1,], method = 'fdr') < 0.05))
+dict[dict$ROI_INDEX %in% parse_number(sig_rois),1:4] %>% pander()
+```
+
 ## Regions of Interest (Significant)
 
 ```{r, include=FALSE}
@@ -150,7 +187,6 @@ for(i in 2:length(sig_rois)){
   if(i %% 2 != 0) next # skip odd numbers
   sig_rois_paired[,i/2] =  rowSums(pnc[,sig_rois[c(i, i+1)]])
 }
-
 
 sig_rois_df = data.frame(pnc[,c("sex", "X35")], sig_rois_paired)
 colnames(sig_rois_df) = c("sex", "Brain Stem", "Cerebellum WM", "Ventral DC", "Fornix", "Ant Limb Int Capsule")
