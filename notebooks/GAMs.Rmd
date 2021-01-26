@@ -1,0 +1,924 @@
+---
+title: 'EDA: GAMs'
+author: "Virgilio Gonzenbach"
+date: "1/13/2021"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      cache = TRUE, 
+                      cache.path = 'cache/GAMs/', 
+                      fig.path = "figures/GAMs/")
+knitr::opts_knit$set(root.dir = '../')
+```
+
+```{r, include=FALSE}
+library(mgcv)
+library(readxl)
+library(tidyverse) # dplyr and ggplot
+library(psych)
+library(stargazer)
+library(pander)
+library(ggpubr)
+library(reshape2)
+
+df = read.csv("data/deriv/HC_data.csv", stringsAsFactors = TRUE)
+dict = read_xlsx("data/MUSE_ROI_Dict.xlsx", 1)
+
+# Improve readibility for raw ICV
+colnames(df)[6] = "raw.ICV"
+
+# Shorten Dictionary
+dict = dict[dict$ROI_INDEX %in% 2:300, ]
+
+# Tissue filters
+VN_filter = dict$TISSUE_SEG == "VN"
+GM_filter = dict$TISSUE_SEG == "GM"
+WM_filter = dict$TISSUE_SEG == "WM"
+
+# Select PNC dataset
+pnc = df %>% filter(site == "PNC") 
+pnc$age2 =  age - mean(age)^2
+
+# Aggregate ROIs
+rois = pnc[, 7:ncol(pnc)]
+pnc$WM = rowSums(rois[, WM_filter])
+pnc$GM = rowSums(rois[, GM_filter])
+pnc$CSF = rowSums(rois[, VN_filter])
+pnc$BrStem = pnc$X35
+
+# Separate datasets by sex
+pnc_M = filter(pnc, sex == "MALE")
+pnc_F = filter(pnc, sex == "FEMALE")
+
+# Parameters for GAMs
+K = 3
+FX = TRUE
+```
+
+
+## Objective
+
+To inform the potential usage of a nonlinear method of harmonization (ComBat-GAM) by:
+
+1. Visualizing nonlinear effects of age on various volumetric regions of interest (ROIs),
+2. Modeling these nonlinear effects using Generative Additive Models (GAMs), and 
+3. Making comparisons between GAMs and their linear counter parts.
+
+All modeling and visualization carried out in PNC data.
+
+Note: All GAMs constrained to K = `r K` and FX = `r FX`, where K denotes the number of basis functions and FX indicates the use of fixed degrees of freedom. 
+
+\pagebreak 
+
+## Age Descriptives
+
+```{r}
+p = df %>% ggplot(aes(x=sex, y=age, color = sex)) + geom_boxplot() + ggtitle("Distribution of Age by Sex in PNC data") + ylab("Age") + xlab("Sex") + theme(plot.title = element_text(hjust = 0.5))
+change_palette(p, palette = "npg")
+```
+
+Full dataset:   
+```{r}
+descr = describe(pnc$age)[,c(2:5, 8:9),]
+row.names(descr) = "age"
+descr %>% pander()
+```
+
+Males:
+```{r}
+library(psych)
+descr = describe(pnc$age[pnc$sex == 'MALE'])[,c(2:5, 8:9),]
+row.names(descr) = "age"
+descr %>% pander()
+```
+
+Females:
+```{r}
+library(psych)
+descr = describe(pnc$age[pnc$sex == 'FEMALE'])[,c(2:5, 8:9),]
+row.names(descr) = "age"
+descr %>% pander()
+```
+
+\pagebreak
+
+## Comparison of GAMs vs Linear models across all 145 ROIs
+
+-Model 1: ROI = sex + age + age*sex  
+-Model 2: ROI = sex + s(age, by = sex), where s() denotes the smooth function(s) fitted separately within each sex.
+
+Number of regions for which models (GAM and linear model) significantly differed:  
+
+```{r}
+## ANOVA of all regions
+Ps = matrix(nrow=2, ncol=ncol(rois))
+colnames(Ps) = colnames(rois)
+
+# Linear vs GAM
+l = rois %>% lapply(function(x) anova(lm(x ~ sex + age + age*sex, data = pnc),
+                                      gam(x ~ s(age, by = sex, bs = 'tp', k=3, fx=FX) + sex, 
+                                          data = pnc, family = gaussian, method = 'REML')))
+
+for(j in colnames(rois)) Ps[1,j] = l[[j]]$`Pr(>F)`[2]
+
+p = c(sum(Ps[1,] < 0.05),
+      sum(p.adjust(Ps[1,], method = 'bonferroni') < 0.05),
+      sum(p.adjust(Ps[1,], method = 'fdr') < 0.05))
+names(p) = c("GAM != Linear (No adj.)", "GAM != Linear (Bonferroni)", "GAM != Linear (FDR)")
+p
+```
+
+ROIs where GAM differed from linear model (adjusted for False Discovery Rate): 
+
+```{r}
+sig_rois = names(which(p.adjust(Ps[1,], method = 'fdr') < 0.05))
+dict[dict$ROI_INDEX %in% parse_number(sig_rois),1:4] %>% pander()
+```
+
+## Comparison Linear models with and without quadratic term (within each sex)
+
+-Model 1: $ROI = age + age^2$
+-Model 2: $ROI = sex + s(age, by = sex)$, where s() denotes the smooth function(s) fitted separately within each sex.
+
+### Males
+
+Number of regions for which models (GAM and linear model) significantly differed:  
+
+```{r}
+## ANOVA of all regions
+Ps = matrix(nrow=2, ncol=ncol(rois))
+colnames(Ps) = colnames(rois)
+
+# Linear vs GAM
+l = rois %>% lapply(function(x){} anova(lm(x ~ age, data = filter(pnc, sex == "MALE")),
+                                      lm(x ~ age + (age - mean(age))^2, data = filter(pnc, sex == "MALE"))
+                                      )
+)
+
+for(j in colnames(rois)) Ps[1,j] = l[[j]]$`Pr(>F)`[2]
+
+p = c(sum(Ps[1,] < 0.05),
+      sum(p.adjust(Ps[1,], method = 'bonferroni') < 0.05),
+      sum(p.adjust(Ps[1,], method = 'fdr') < 0.05))
+names(p) = c("GAM != Linear (No adj.)", "GAM != Linear (Bonferroni)", "GAM != Linear (FDR)")
+p
+```
+
+ROIs where quadratic term improved the model (adjusted for False Discovery Rate): 
+
+```{r}
+sig_rois = names(which(p.adjust(Ps[1,], method = 'fdr') < 0.05))
+dict[dict$ROI_INDEX %in% parse_number(sig_rois),1:4] %>% pander()
+```
+
+## Regions of Interest (Significant)
+
+```{r, include=FALSE}
+## Box plots
+
+sig_rois_paired = matrix(data = NA, nrow = nrow(pnc), ncol = length(sig_rois) %/% 2)
+
+for(i in 2:length(sig_rois)){
+  if(i %% 2 != 0) next # skip odd numbers
+  sig_rois_paired[,i/2] =  rowSums(pnc[,sig_rois[c(i, i+1)]])
+}
+
+sig_rois_df = data.frame(pnc[,c("sex", "X35")], sig_rois_paired)
+colnames(sig_rois_df) = c("sex", "Brain Stem", "Cerebellum WM", "Ventral DC", "Fornix", "Ant Limb Int Capsule")
+
+df.m = melt(sig_rois_df)
+```
+
+
+```{r}
+df.m %>% ggplot(aes(x=variable, y=value, col=sex)) + geom_boxplot() + ggtitle("Significant GAMs") + ylab("Volume") + xlab("Region of Interest")
+
+## change palette
+change_palette(p, "npg")
+```
+
+
+```{r}
+upper.panel<-function(x, y){
+  points(x,y, pch=19, col=c("red", "blue")[sig_rois_df$sex])
+  r <- round(cor(x, y), digits=2)
+  txt <- paste0("R = ", r)
+  usr <- par("usr"); on.exit(par(usr))
+  par(usr = c(0, 1, 0, 1))
+  text(0.5, 0.9, txt)
+}
+pairs(sig_rois_df[,-1], lower.panel = NULL, 
+      upper.panel = upper.panel, main = "Pairwise correlations of significant ROIs (GAM)")
+```
+
+\pagebreak
+
+## Brain Stem
+### Brain Stem: Plot GAM
+
+```{r}
+sig_rois_df$age = pnc$age # add age
+colnames(sig_rois_df) = gsub(" ", "\\.", colnames(sig_rois_df)) # replace spaces for dots in column names
+
+# Males
+gam_M = mgcv::gam(Brain.Stem ~ s(age,
+                                  k=K,
+                                  bs = 'tp',
+                                  fx=FX), 
+                    data = filter(sig_rois_df, sex == "MALE"),
+                    family = gaussian,
+                    method = 'REML')
+
+# Females
+gam_F = mgcv::gam(Brain.Stem ~ s(age,
+                                k=K,
+                                bs = 'tp',
+                                fx=FX), 
+                    data = filter(sig_rois_df, sex == "FEMALE"),
+                    family = gaussian,
+                    method = 'REML')
+
+par(mfrow= c(1, 2))
+plot(gam_F, residuals = TRUE, pch = 1, main = "Females", ylab = "Brain Stem", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_M)[1])
+plot(gam_M, residuals = TRUE, pch = 1,  main = 'Males', cex = 0.75, ylab = "Brain Stem", shade = TRUE, seWithMean = TRUE, shift = coef(gam_F)[1])
+```
+
+```{r}
+summ_M = summary(gam_M)
+summ_F = summary(gam_F)
+```
+
+- Males: $R^2 =$ `r round(summ_M$r.sq,3)`  
+- Females: $R^2 =$ `r round(summ_F$r.sq,3)` 
+
+### Brain Stem: Linear Models by Sex
+
+```{r, results='asis'}
+lm_M = lm(scale(Brain.Stem) ~ scale(age) + scale((age - mean(age))^2), data = filter(sig_rois_df, sex == "MALE"))
+lm_F = lm(scale(Brain.Stem) ~ scale(age) + scale((age - mean(age))^2) , data = filter(sig_rois_df, sex == "FEMALE"))
+
+# Show table (pretty)
+#suppressMessages(tab_model(lm_M, lm_F,p.style = "numeric"))
+stargazer(lm_M, lm_F, 
+          column.labels = c("Males", "Females"),
+          dep.var.labels = "Brain Stem Volume",
+          covariate.labels = c("Age", "Age (Squared)"),
+          keep.stat = c("rsq"),
+          notes = "Stargazer", 
+          header=FALSE,
+          column.sep.width = "25pt",
+          single.row = TRUE,
+          ci = TRUE,
+          star.cutoffs = c(.05, .01, .001)
+          )
+```
+
+\pagebreak
+
+### Brain Stem: GAM summary
+
+```{r}
+gam = mgcv::gam(Brain.Stem ~ s(age,  by = sex, bs = 'tp', k=K, fx=FX) + sex, 
+                    data = sig_rois_df,
+                    family = gaussian,
+                    method = 'REML')
+summary(gam)
+```
+
+Compare with R-squared of the equivalent linear model (ICV ~ sex + age + age *x* sex): `r round(summary(lm(Brain.Stem ~ scale(age) + sex*scale(age), data = sig_rois_df))$r.squared, 3)`
+
+Compare GAM and linear model directly:
+
+```{r}
+anova(lm(Brain.Stem~ scale(age) + sex*scale(age) + sex, data = sig_rois_df), gam)
+```
+
+\pagebreak
+
+## Cerebellum White Matter
+### Cerebellum WM: Plot GAM
+
+```{r}
+# Males
+gam_M = mgcv::gam(Cerebellum.WM ~ s(age,
+                                  k=K,
+                                  bs = 'tp', 
+                                  fx=FX), 
+                    data = filter(sig_rois_df, sex == "MALE"),
+                    family = gaussian,
+                    method = 'REML')
+# Females
+gam_F = mgcv::gam(Cerebellum.WM ~ s(age,
+                                k=K,
+                                bs = 'tp',
+                                fx=FX), 
+                    data = filter(sig_rois_df, sex == "FEMALE"),
+                    family = gaussian,
+                    method = 'REML')
+
+par(mfrow= c(1, 2))
+plot(gam_F, residuals = TRUE, pch = 1, ylab = "Cerebellum WM", main = "Females", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_M)[1])
+plot(gam_M, residuals = TRUE, pch = 1, ylab = "Cerebellum WM", main = 'Males', cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_F)[1])
+```
+
+### Cerebellum WM: Linear Models by Sex
+
+```{r, results='asis'}
+lm_M = lm(scale(Cerebellum.WM) ~ scale(age) + scale((age - mean(age))^2) , data = filter(sig_rois_df, sex == "MALE"))
+lm_F = lm(scale(Cerebellum.WM) ~ scale(age) + scale((age - mean(age))^2) , data = filter(sig_rois_df, sex == "FEMALE"))
+
+# Show table (pretty)
+stargazer(lm_M, lm_F, 
+          column.labels = c("Males", "Females"),
+          dep.var.labels = "Cerebellum WM ",
+          covariate.labels = c("Age", "Age (Squared)"),
+          keep.stat = c("rsq"),
+          notes = "Stargazer", 
+          header=FALSE,
+          column.sep.width = "25pt",
+          single.row = TRUE,
+          ci = TRUE,
+          star.cutoffs = c(.05, .01, .001)
+          )
+```
+
+```{r}
+summ_M = summary(gam_M)
+summ_F = summary(gam_F)
+```
+
+R-squared of GAMs:  
+- Males: $R^2 =$ `r round(summ_M$r.sq,3)`  
+- Females: $R^2 =$ `r round(summ_F$r.sq,3)` 
+
+\pagebreak
+
+### Cerebellum WM: GAM summary
+
+```{r}
+gam = mgcv::gam(Cerebellum.WM ~ s(age,  by = sex, bs = 'tp', k=K, fx=FX) + sex, 
+                    data = sig_rois_df,
+                    family = gaussian,
+                    method = 'REML')
+summary(gam)
+```
+
+Compare with R-squared of the equivalent linear model (Cerebellum.WM ~ sex + age + age *x* sex): `r round(summary(lm(Cerebellum.WM ~ scale(age) + sex*scale(age), data = sig_rois_df))$r.squared, 3)`
+
+Compare GAM and linear model directly:
+
+```{r}
+anova(lm(Cerebellum.WM ~ scale(age) + sex*scale(age) + sex, data = sig_rois_df), gam)
+```
+
+
+
+\pagebreak
+
+## Ventral Diencephalon
+### Ventral DC: Plot GAM
+
+```{r}
+# Males
+gam_M = mgcv::gam(Ventral.DC ~ s(age,
+                                  k=K,
+                                  bs = 'tp', 
+                                  fx=FX), 
+                    data = filter(sig_rois_df, sex == "MALE"),
+                    family = gaussian,
+                    method = 'REML')
+# Females
+gam_F = mgcv::gam(Ventral.DC ~ s(age,
+                                k=K,
+                                bs = 'tp',
+                                fx=FX), 
+                    data = filter(sig_rois_df, sex == "FEMALE"),
+                    family = gaussian,
+                    method = 'REML')
+
+par(mfrow= c(1, 2))
+plot(gam_F, residuals = TRUE, pch = 1, ylab = "Ventral DC", main = "Females", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_M)[1])
+plot(gam_M, residuals = TRUE, pch = 1, ylab = "Ventral DC", main = 'Males', cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_F)[1])
+```
+
+### Ventral DC: Linear Models by Sex
+
+```{r, results='asis'}
+lm_M = lm(scale(Ventral.DC) ~ scale(age) + scale((age - mean(age))^2) , data = filter(sig_rois_df, sex == "MALE"))
+lm_F = lm(scale(Ventral.DC) ~ scale(age) + scale((age - mean(age))^2) , data = filter(sig_rois_df, sex == "FEMALE"))
+
+# Show table (pretty)
+stargazer(lm_M, lm_F, 
+          column.labels = c("Males", "Females"),
+          dep.var.labels = "Ventral DC",
+          covariate.labels = c("Age", "Age (Squared)"),
+          keep.stat = c("rsq"),
+          notes = "Stargazer", 
+          header=FALSE,
+          column.sep.width = "25pt",
+          single.row = TRUE,
+          ci = TRUE,
+          star.cutoffs = c(.05, .01, .001)
+          )
+```
+
+```{r}
+summ_M = summary(gam_M)
+summ_F = summary(gam_F)
+```
+
+- Males: $R^2 =$ `r round(summ_M$r.sq,3)`  
+- Females: $R^2 =$ `r round(summ_F$r.sq,3)` 
+
+\pagebreak
+
+### Ventral DC: GAM summary
+
+```{r}
+gam = mgcv::gam(Ventral.DC ~ s(age,  by = sex, bs = 'tp', k=K, fx=FX) + sex, 
+                    data = sig_rois_df,
+                    family = gaussian,
+                    method = 'REML')
+summary(gam)
+```
+
+Compare with R-squared of the equivalent linear model (Ventral.DC ~ sex + age + age *x* sex): `r round(summary(lm(Ventral.DC ~ scale(age) + sex*scale(age), data = sig_rois_df))$r.squared, 3)`
+
+Compare GAM and linear model directly:
+
+```{r}
+anova(lm(Ventral.DC ~ scale(age) + sex*scale(age) + sex, data = sig_rois_df), gam)
+```
+
+\pagebreak
+
+## Fornix
+### Fornix: Plot GAM
+
+```{r}
+# Males
+gam_M = mgcv::gam(Fornix ~ s(age,
+                                  k=K,
+                                  bs = 'tp', 
+                                  fx=FX), 
+                    data = filter(sig_rois_df, sex == "MALE"),
+                    family = gaussian,
+                    method = 'REML')
+# Females
+gam_F = mgcv::gam(Fornix ~ s(age,
+                                k=K,
+                                bs = 'tp',
+                                fx=FX), 
+                    data = filter(sig_rois_df, sex == "FEMALE"),
+                    family = gaussian,
+                    method = 'REML')
+
+par(mfrow= c(1, 2))
+plot(gam_F, residuals = TRUE, pch = 1, ylab = "Fornix", main = "Females", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_M)[1])
+plot(gam_M, residuals = TRUE, pch = 1, ylab = "Fornix", main = 'Males', cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_F)[1])
+```
+
+```{r}
+summ_M = summary(gam_M)
+summ_F = summary(gam_F)
+```
+
+- Males: $R^2 =$ `r round(summ_M$r.sq,3)`  
+- Females: $R^2 =$ `r round(summ_F$r.sq,3)` 
+
+### Fornix: Linear Models by Sex
+
+```{r, results='asis'}
+lm_M = lm(scale(Fornix) ~ scale(age) + scale((age - mean(age))^2) , data = filter(sig_rois_df, sex == "MALE"))
+lm_F = lm(scale(Fornix) ~ scale(age) + scale((age - mean(age))^2) , data = filter(sig_rois_df, sex == "FEMALE"))
+
+# Show table (pretty)
+stargazer(lm_M, lm_F, 
+          column.labels = c("Males", "Females"),
+          dep.var.labels = "Fornix",
+          covariate.labels = c("Age", "Age (Squared)"),
+          keep.stat = c("rsq"),
+          notes = "Stargazer", 
+          header=FALSE,
+          column.sep.width = "25pt",
+          single.row = TRUE,
+          ci = TRUE,
+          star.cutoffs = c(.05, .01, .001)
+          )
+```
+
+\pagebreak
+
+### Fornix: GAM summary
+
+```{r}
+gam = mgcv::gam(Fornix ~ s(age,  by = sex, bs = 'tp', k=K, fx=FX) + sex, 
+                    data = sig_rois_df,
+                    family = gaussian,
+                    method = 'REML')
+summary(gam)
+```
+
+Compare with R-squared of the equivalent linear model (Fornix ~ sex + age + age *x* sex): `r round(summary(lm(Fornix ~ scale(age) + sex*scale(age), data = sig_rois_df))$r.squared, 3)`
+
+Compare GAM and linear model directly:
+
+```{r}
+anova(lm(Fornix ~ scale(age) + sex*scale(age) + sex, data = sig_rois_df), gam)
+```
+
+\pagebreak
+
+## Anterior Limb of Internal Capsule (ALIC)
+### ALIC: Plot GAM
+
+```{r}
+# Males
+gam_M = mgcv::gam(Ant.Limb.Int.Capsule ~ s(age,
+                                  k=K,
+                                  bs = 'tp', 
+                                  fx=FX), 
+                    data = filter(sig_rois_df, sex == "MALE"),
+                    family = gaussian,
+                    method = 'REML')
+# Females
+gam_F = mgcv::gam(Ant.Limb.Int.Capsule ~ s(age,
+                                k=K,
+                                bs = 'tp',
+                                fx=FX), 
+                    data = filter(sig_rois_df, sex == "FEMALE"),
+                    family = gaussian,
+                    method = 'REML')
+
+par(mfrow= c(1, 2))
+plot(gam_F, residuals = TRUE, pch = 1, ylab = "Ant. Limb Internal Capsule", main = "Females", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_M)[1])
+plot(gam_M, residuals = TRUE, pch = 1, ylab = "Ant. Limb Internal Capsule", main = 'Males', cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_F)[1])
+```
+
+```{r}
+summ_M = summary(gam_M)
+summ_F = summary(gam_F)
+```
+
+- Males: $R^2 =$ `r round(summ_M$r.sq,3)`  
+- Females: $R^2 =$ `r round(summ_F$r.sq,3)` 
+
+### ALIC: Linear Models by Sex
+
+```{r, results='asis'}
+lm_M = lm(scale(Ant.Limb.Int.Capsule) ~ scale(age) + scale((age - mean(age))^2) , data = filter(sig_rois_df, sex == "MALE"))
+lm_F = lm(scale(Ant.Limb.Int.Capsule) ~ scale(age) + scale((age - mean(age))^2) , data = filter(sig_rois_df, sex == "FEMALE"))
+
+# Show table (pretty)
+stargazer(lm_M, lm_F, 
+          column.labels = c("Males", "Females"),
+          dep.var.labels = "Ant. Limb Internal Capsule",
+          covariate.labels = c("Age", "Age (Squared)"),
+          keep.stat = c("rsq"),
+          notes = "Stargazer", 
+          header=FALSE,
+          column.sep.width = "25pt",
+          single.row = TRUE,
+          ci = TRUE,
+          star.cutoffs = c(.05, .01, .001)
+          )
+```
+
+\pagebreak
+### ALIC: GAM summary
+
+```{r}
+gam = mgcv::gam(Ant.Limb.Int.Capsule ~ s(age,  by = sex, bs = 'tp', k=K, fx=FX) + sex, 
+                    data = sig_rois_df,
+                    family = gaussian,
+                    method = 'REML')
+summary(gam)
+```
+
+Compare with R-squared of the equivalent linear model (ALIC ~ sex + age + age *x* sex): `r round(summary(lm(Ant.Limb.Int.Capsule ~ scale(age) + sex*scale(age), data = sig_rois_df))$r.squared, 3)`
+
+Compare GAM and linear model directly:
+
+```{r}
+anova(lm(Ant.Limb.Int.Capsule ~ scale(age) + sex*scale(age) + sex, data = sig_rois_df), gam)
+```
+
+
+\pagebreak
+
+## Intracranial Volume
+### ICV: Plot GAM
+
+```{r}
+# Males
+gam_M = mgcv::gam(raw.ICV ~ s(age,
+                                  k=K,
+                                  bs = 'tp', 
+                                  fx=FX), 
+                    data = filter(pnc, sex == "MALE"),
+                    family = gaussian,
+                    method = 'REML')
+# Females
+gam_F = mgcv::gam(raw.ICV ~ s(age,
+                                k=K,
+                                bs = 'tp',
+                                fx=FX), 
+                    data = filter(pnc, sex == "FEMALE"),
+                    family = gaussian,
+                    method = 'REML')
+
+par(mfrow= c(1, 2))
+plot(gam_F, residuals = TRUE, pch = 1, main = "Females", ylab = "raw ICV", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_M)[1])
+plot(gam_M, residuals = TRUE, pch = 1, cex = 0.75, ylab = "raw ICV", shade = TRUE, seWithMean = TRUE, shift = coef(gam_F)[1], main = 'Males')
+```
+
+```{r}
+summ_M = summary(gam_M)
+summ_F = summary(gam_F)
+```
+
+- Males: $R^2 =$ `r round(summ_M$r.sq,3)`  
+- Females: $R^2 =$ `r round(summ_F$r.sq,3)` 
+
+### ICV: Linear Models by Sex
+
+```{r, results='asis'}
+lm_M = lm(scale(raw.ICV) ~ scale(age) + scale((age - mean(age))^2) , data = filter(pnc, sex == "MALE"))
+lm_F = lm(scale(raw.ICV) ~ scale(age) + scale((age - mean(age))^2) , data = filter(pnc, sex == "FEMALE"))
+
+# Show table (pretty)
+#suppressMessages(tab_model(lm_M, lm_F,p.style = "numeric"))
+stargazer(lm_M, lm_F, 
+          column.labels = c("Males", "Females"),
+          dep.var.labels = "Intracranial Volume ",
+          covariate.labels = c("Age", "Age (Squared)"),
+          keep.stat = c("rsq"),
+          notes = "Stargazer", 
+          header=FALSE,
+          column.sep.width = "25pt",
+          single.row = TRUE,
+          ci = TRUE,
+          star.cutoffs = c(.05, .01, .001)
+          )
+```
+
+\pagebreak
+
+### ICV: GAM summary
+
+```{r}
+gam = mgcv::gam(raw.ICV ~ s(age,  by = sex, bs = 'tp', k=K, fx=FX) + sex, 
+                    data = pnc,
+                    family = gaussian,
+                    method = 'REML')
+summary(gam)
+```
+
+Model indicates ICV-to-Age relationship in males is approx. linear (EDF $\approx$ 1) and significant. In females, however, the relationship is closer to a quadratic term (EDF  2) and non-significant.
+
+Compare with R-squared of the equivalent linear model (ICV ~ sex + age + age *x* sex): `r round(summary(lm(raw.ICV ~ scale(age) + sex*scale(age), data = pnc))$r.squared, 3)`
+
+Compare GAM and linear model directly:
+
+```{r}
+anova(lm(raw.ICV ~ scale(age) + sex*scale(age) + sex, data = pnc), gam)
+```
+
+\pagebreak
+
+## White Matter
+### WM: Plot GAMs
+
+```{r}
+# Males
+gam_M = mgcv::gam(WM ~ s(age,
+                            k=K, fx=FX,
+                            bs = 'tp'), 
+                    data = filter(pnc, sex == "MALE"),
+                    family = gaussian,
+                    method = 'REML')
+# Females
+gam_F = mgcv::gam(WM ~ s(age,
+                            k=K, fx=FX,
+                            bs = 'tp'), 
+                    data = filter(pnc, sex == "FEMALE"),
+                    family = gaussian,
+                    method = 'REML')
+
+par(mfrow= c(1, 2))
+plot(gam_F, residuals = TRUE, pch = 1, ylab = "raw WM", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_F)[1], main = "Females")
+plot(gam_M, residuals = TRUE, pch = 1, ylab = "raw WM", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_M)[1], main = 'Males')
+```
+
+```{r}
+summ_M = summary(gam_M)
+summ_F = summary(gam_F)
+```
+
+- Males: $R^2 =$ `r round(summ_M$r.sq,3)`  
+- Females: $R^2 =$ `r round(summ_F$r.sq,3)` 
+
+### WM: Linear models by sex
+
+```{r, results='asis'}
+lm_M = lm(scale(WM) ~ scale(age) + scale((age - mean(age))^2) , data = filter(pnc, sex == "MALE"))
+lm_F = lm(scale(WM) ~ scale(age) + scale((age - mean(age))^2) , data = filter(pnc, sex == "FEMALE"))
+
+# Show table (pretty)
+# suppressMessages(tab_model(lm_M, lm_F,p.style = "numeric"))
+stargazer(lm_M, lm_F, 
+          column.labels = c("Males", "Females"),
+          dep.var.labels = "White Matter Volume ",
+          covariate.labels = c("Age", "Age (Squared)"),
+          keep.stat = c("rsq"),
+          notes = "Stargazer", 
+          header=FALSE,
+          column.sep.width = "25pt",
+          single.row = TRUE,
+          ci = TRUE,
+          star.cutoffs = c(.05, .01, .001)
+          )
+```
+
+\pagebreak
+
+### WM: GAM summary
+
+```{r}
+gam = mgcv::gam(WM ~ s(age,  by = sex, bs = 'tp', k=K, fx=FX) + sex, 
+                    data = pnc,
+                    family = gaussian,
+                    method = 'REML')
+summary(gam)
+```
+
+Model indicates WM-to-Age relationship is nonlinear and statistically significant in both males and females. WM increases with age; but in females, growth stops at 20 years of age.
+
+Compare with R-squared of the equivalent linear model (WM ~ sex + age + age *x* sex): `r round(summary(lm(WM ~ scale(age) + sex*scale(age), data = pnc))$adj.r.squared, 3)`
+
+Compare GAM and linear model directly:
+
+```{r}
+anova(lm(WM ~ scale(age) + sex*scale(age) + sex, data = pnc), gam)
+```
+
+\pagebreak
+
+## Gray Matter
+### GM: Plot GAMs
+
+```{r}
+# Males
+gam_M = mgcv::gam(GM ~ s(age,
+                                k=K, fx=FX,
+                                bs = 'tp'), 
+                    data = filter(pnc, sex == "MALE"),
+                    family = gaussian,
+                    method = 'REML')
+# Females
+gam_F = mgcv::gam(GM ~ s(age,
+                                k=K, fx=FX,
+                                bs = 'tp'), 
+                    data = filter(pnc, sex == "FEMALE"),
+                    family = gaussian,
+                    method = 'REML')
+
+par(mfrow= c(1, 2))
+plot(gam_F, residuals = TRUE, pch = 1, ylab = "raw GM", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_F)[1], main = "Females")
+plot(gam_M, residuals = TRUE, pch = 1, ylab = "raw GM", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_M)[1], main = 'Males')
+```
+
+```{r}
+summ_M = summary(gam_M)
+summ_F = summary(gam_F)
+```
+
+- Males: $R^2 =$ `r round(summ_M$r.sq,3)`  
+- Females: $R^2 =$ `r round(summ_F$r.sq,3)` 
+
+### GM: Linear models by sex
+
+```{r, results='asis'}
+lm_M = lm(scale(GM) ~ scale(age) + scale((age - mean(age))^2) , data = filter(pnc, sex == "MALE"))
+lm_F = lm(scale(GM) ~ scale(age) + scale((age - mean(age))^2) , data = filter(pnc, sex == "FEMALE"))
+
+# Show table (pretty)
+# suppressMessages(tab_model(lm_M, lm_F,p.style = "numeric"))
+stargazer(lm_M, lm_F, 
+          column.labels = c("Males", "Females"),
+          dep.var.labels = "Gray Matter Volume ",
+          covariate.labels = c("Age", "Age (Squared)"),
+          keep.stat = c("rsq"),
+          notes = "Stargazer", 
+          header=FALSE,
+          column.sep.width = "25pt",
+          single.row = TRUE,
+          ci = TRUE,
+          star.cutoffs = c(.05, .01, .001)
+          )
+```
+
+### GM: GAM summary
+
+```{r}
+gam = mgcv::gam(GM ~ s(age,  by = sex, bs = 'tp', k=K, fx=FX) + sex, 
+                    data = pnc,
+                    family = gaussian,
+                    method = 'REML')
+summary(gam)
+```
+
+Model indicates GM-to-age relationship is linear and statistically significant for both males and females. GM decreases with age.
+
+Compare with adj. R-squared of the equivalent linear model (WM ~ sex + age + age *x* sex): `r round(summary(lm(GM ~ scale(age) + sex*scale(age), data = pnc))$adj.r.squared, 3)`
+
+Compare GAM and linear model directly:
+
+```{r}
+anova(lm(GM ~ scale(age) + sex*scale(age) + sex, data = pnc), gam)
+```
+
+\pagebreak
+
+## Cerebrospinal Fluid (in ventricles only)
+### CSF: Plot GAMs
+
+```{r}
+# Males
+gam_M = mgcv::gam(CSF ~ s(age,
+                             bs = 'tp', k=K, fx=FX), 
+                    data = pnc[pnc$sex == "MALE",],
+                    family = gaussian,
+                    method = 'REML')
+```
+
+```{r}
+# Females
+gam_F = mgcv::gam(CSF ~ s(age,
+                             bs = 'tp', k=K, fx=FX), 
+                    data = filter(pnc, sex == "FEMALE"),
+                    family = gaussian,
+                    method = 'REML')
+
+par(mfrow = c(1, 2))
+plot(gam_F, residuals = TRUE, pch = 1, ylab = "raw CSF", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_F)[1], main = "Females")
+plot(gam_M, residuals = TRUE, pch = 1, ylab = "raw CSF", cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_M)[1], main = 'Males')
+```
+
+```{r}
+summ_M = summary(gam_M)
+summ_F = summary(gam_F)
+```
+
+Compare with R-squared of GAM:  
+- Males: $R^2 =$ `r round(summ_M$r.sq,3)`  
+- Females: $R^2 =$ `r round(summ_F$r.sq,3)` 
+
+### CSF: Linear models by sex
+
+```{r, results='asis'}
+lm_M = lm(scale(CSF) ~ scale(age) + scale((age - mean(age))^2) , data = filter(pnc, sex == "MALE"))
+lm_F = lm(scale(CSF) ~ scale(age) + scale((age - mean(age))^2) , data = filter(pnc, sex == "FEMALE"))
+
+# Show table (pretty)
+# suppressMessages(tab_model(lm_M, lm_F,p.style = "numeric"))
+stargazer(lm_M, lm_F, 
+          column.labels = c("Males", "Females"),
+          dep.var.labels = "Cerebrospinal Fluid Volume ",
+          covariate.labels = c("Age", "Age (Squared)"),
+          keep.stat = c("rsq"),
+          notes = "Stargazer", 
+          header=FALSE,
+          column.sep.width = "25pt",
+          single.row = TRUE,
+          ci = TRUE,
+          star.cutoffs = c(.05, .01, .001)
+          )
+```
+
+\pagebreak
+
+### CSF: GAM summary
+
+```{r}
+gam = mgcv::gam(CSF ~ s(age,  by = sex, bs = 'tp', k=K, fx=FX) + sex, 
+                    data = pnc,
+                    family = gaussian,
+                    method = 'REML')
+summary(gam)
+```
+
+Model indicates CSF-to-age relationship is linear and statistically significant in males and females. CSF increases with age.
+
+Compare with adj. R-squared of the equivalent linear model (CSF ~ sex + age + age *x* sex): `r round(summary(lm(CSF ~ scale(age) + sex*scale(age), data = pnc))$adj.r.squared, 4)`
+
+Compare GAM and linear model directly:
+
+```{r}
+anova(lm(CSF ~ scale(age) + sex*scale(age) + sex, data = pnc), gam)
+```
