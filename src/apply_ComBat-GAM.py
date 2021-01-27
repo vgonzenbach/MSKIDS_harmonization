@@ -85,7 +85,11 @@ data_F_adj = pd.concat([data_F.iloc[:, :5],
                                      )
                         ], axis=1)
                         
+# concatenate Data Frame for Males and Females
 data_adj = pd.concat([data_M_adj, data_F_adj], axis=0).sort_index()
+
+# drop PNC rows from data to save
+data_adj = data_adj.drop(index = [data_M_adj.index[-1], data_F_adj.index[-1]])
 
 # save adjusted DataFrame as .csv
 data_adj.to_csv(os.path.join(DATA_DIR, 'MS_data_adj-ComBat-GAM.csv'), index=False)
