@@ -1,0 +1,434 @@
+---
+title: "EDA: MS ComBat-GAM"
+author: "Virgilio Gonzenbach"
+date: "1/22/2021"
+output: beamer_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      cache = FALSE, 
+                      cache.path = 'cache/eda_ComBat-GAM/', 
+                      fig.path = "figures/eda_ComBat-GAM/")
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
+
+## Objective
+
+To visualize effects of ComBat-GAM applied on the MS data relative to the raw MS data.
+
+```{r, include=FALSE}
+library(tidyverse) # dplyr and ggplot
+library(readxl)
+library(psych) 
+library(pander)
+library(ggpubr)
+library(reshape2)
+
+# Load data
+HC_raw = read.csv('data/deriv/HC_data.csv', stringsAsFactors = TRUE)
+HC_adj = read.csv('data/deriv/HC_data_adj-ComBat-GAM.csv', stringsAsFactors = TRUE)
+MS_raw = read.csv('data/deriv/MS_data.csv', stringsAsFactors = TRUE)
+MS_adj = read.csv('data/deriv/MS_data_adj-ComBat-GAM.csv', stringsAsFactors = TRUE)
+dict = read_xlsx("data/MUSE_ROI_Dict.xlsx", 1)
+
+# Improve readibility for ICV
+colnames(HC_raw)[6] = "ICV"
+colnames(HC_adj)[6] = "ICV"
+colnames(MS_raw)[6] = "ICV"
+colnames(MS_adj)[6] = "ICV"
+
+# Shorten Dictionary
+dict = dict[dict$ROI_INDEX %in% 2:300, ]
+
+# Tissue filters
+VN_filter = dict$TISSUE_SEG == "VN"
+GM_filter = dict$TISSUE_SEG == "GM"
+WM_filter = dict$TISSUE_SEG == "WM"
+
+# Filter out PNC
+HC_raw = filter(HC_raw, site != "PNC")
+HC_adj = filter(HC_adj, site != "PNC")
+
+# Aggregate ROIs
+HC_rois_raw = HC_raw[, 7:ncol(MS_raw)]
+HC_raw$WM = rowSums(HC_rois_raw[, WM_filter])
+HC_raw$GM = rowSums(HC_rois_raw[, GM_filter])
+HC_raw$CSF = rowSums(HC_rois_raw[, VN_filter])
+HC_raw$Brain.Stem = HC_raw$X35
+
+HC_rois_adj = HC_adj[, 7:ncol(HC_adj)]
+HC_adj$WM = rowSums(HC_rois_adj[, WM_filter])
+HC_adj$GM = rowSums(HC_rois_adj[, GM_filter])
+HC_adj$CSF = rowSums(HC_rois_adj[, VN_filter])
+HC_adj$Brain.Stem = HC_adj$X35
+
+MS_rois_raw = MS_raw[, 7:ncol(MS_raw)]
+MS_raw$WM = rowSums(MS_rois_raw[, WM_filter])
+MS_raw$GM = rowSums(MS_rois_raw[, GM_filter])
+MS_raw$CSF = rowSums(MS_rois_raw[, VN_filter])
+MS_raw$Brain.Stem = MS_raw$X35
+
+MS_rois_adj = MS_adj[, 7:ncol(MS_adj)]
+MS_adj$WM = rowSums(MS_rois_adj[, WM_filter])
+MS_adj$GM = rowSums(MS_rois_adj[, GM_filter])
+MS_adj$CSF = rowSums(MS_rois_adj[, VN_filter])
+MS_adj$Brain.Stem = MS_adj$X35
+```
+
+## IMPORTANT
+
+MS patients from the *HSC* site that were scanned in a *SIEMENSTIMTRIO* scanner were excluded from the current harmonization.
+
+```{r}
+img = png::readPNG('docs/batch_exclusion_MS.png')
+grid::grid.raster(img)
+```
+
+## IMPORTANT (cont.)
+
+The corresponding group in the Healthy Control data was similarly excluded when modeling site effects with ComBat-GAM. 
+
+```{r}
+img = png::readPNG('docs/batch_exclusion_HC.png')
+grid::grid.raster(img)
+```
+
+## Dimensions
+ 
+MS:  
+
+```{r}
+dim(MS_adj)
+```
+
+HC (no PNC):
+
+```{r}
+dim(HC_adj)
+```
+
+## Age across sites
+
+```{r}
+MS_raw %>% ggplot(aes(x=site, col=site, y=age)) + geom_boxplot() + facet_wrap(~sex) + xlab("Site") + ylab("Age") + ggtitle("Distribution of MS patients' age across sites")
+```
+
+
+## Sex Across sites
+
+MS: 
+```{r}
+table(MS_raw$sex, MS_raw$site)
+```
+
+HC:
+```{r}
+table(HC_raw$sex, HC_raw$site)
+```
+
+
+## Site effects: MS Raw
+
+Number of ROIs showing a significant model difference due to accounting for site:
+
+```{r}
+## ANOVA of all regions
+Ps = matrix(nrow=4, ncol=ncol(MS_rois_raw))
+colnames(Ps) = colnames(MS_rois_raw)
+
+# For MS raw data
+l = MS_rois_raw %>% lapply(function(x) anova(lm(x ~ sex + age + age*sex, data = MS_raw),
+                                      lm(x ~ sex + age + age*sex + site, data = MS_raw)))
+
+for(j in colnames(MS_rois_raw)) Ps[1,j] = l[[j]]$`Pr(>F)`[2]
+
+p = c(sum(Ps[1,] < 0.05),
+      sum(p.adjust(Ps[1,], method = 'bonferroni') < 0.05),
+      sum(p.adjust(Ps[1,], method = 'fdr') < 0.05))
+names(p) = c("MS Raw (Uncorrected P)", "MS Raw (Bonferroni)", "MS Raw (FDR)")
+p %>% pander()
+```
+
+## Site effects: MS adj
+
+Number of ROIs showing a significant model difference due to accounting for site:
+
+```{r}
+# For MS adj data
+l = MS_rois_adj %>% lapply(function(x) anova(lm(x ~ sex + age + age*sex, data = MS_adj),
+                                          lm(x ~ sex + age + age*sex + site, data = MS_adj)))
+
+for(j in colnames(MS_rois_adj)) Ps[2,j] = l[[j]]$`Pr(>F)`[2]
+
+p = c(sum(Ps[2,] < 0.05),
+      sum(p.adjust(Ps[2,], method = 'bonferroni') < 0.05),
+      sum(p.adjust(Ps[2,], method = 'fdr') < 0.05))
+names(p) = c("MS Harmonized (Uncorrected P)", "MS Harmonized (Bonferroni)", "MS Harmonized (FDR)")
+p %>% pander()
+```
+
+## Site effects: HC raw
+
+Number of ROIs showing a significant model difference due to accounting for site:
+
+```{r}
+# For HC raw data
+l = HC_rois_raw %>% lapply(function(x) anova(lm(x ~ sex + age + age*sex, data = HC_raw),
+                                      lm(x ~ sex + age + age*sex + site, data = HC_raw)))
+
+for(j in colnames(HC_rois_raw)) Ps[3,j] = l[[j]]$`Pr(>F)`[2]
+
+p = c(sum(Ps[3,] < 0.05),
+      sum(p.adjust(Ps[3,], method = 'bonferroni') < 0.05),
+      sum(p.adjust(Ps[3,], method = 'fdr') < 0.05))
+names(p) = c("HC Raw (Uncorrected P)", "HC Raw (Bonferroni)", "HC Raw (FDR)")
+p %>% pander()
+```
+
+## Site effects: HC adj
+
+```{r}
+# For HC adj data
+l = HC_rois_adj %>% lapply(function(x) anova(lm(x ~ sex + age + age*sex, data = HC_adj),
+                                          lm(x ~ sex + age + age*sex + site, data = HC_adj)))
+
+for(j in colnames(HC_rois_adj)) Ps[4,j] = l[[j]]$`Pr(>F)`[2]
+
+p = c(sum(Ps[4,] < 0.05),
+      sum(p.adjust(Ps[4,], method = 'bonferroni') < 0.05),
+      sum(p.adjust(Ps[4,], method = 'fdr') < 0.05))
+names(p) = c("HC Harmonized (Uncorrected P)", "HC Harmonized (Bonferroni)", "HC Harmonized (FDR)")
+p %>% pander()
+```
+
+
+## ICV: Raw vs Harmonized
+
+```{r}
+# Boxplots
+p_MS_raw = MS_raw %>% ggplot(aes(x = site, y = ICV, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("MS Raw")
+p_MS_adj = MS_adj %>% ggplot(aes(x = site, y = ICV, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("MS Harmonized")
+p_HC_raw = HC_raw %>% ggplot(aes(x = site, y = ICV, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("HC Raw")
+p_HC_adj = HC_adj %>% ggplot(aes(x = site, y = ICV, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("HC Harmonized")
+
+ggarrange(p_MS_raw, p_MS_adj, p_HC_raw, p_HC_adj, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## ICV: Raw vs Harmonized (adj for sex and age)
+
+```{r}
+# Visualize ICV All and MF
+p_MS_raw = MS_raw %>% ggplot(aes(x = site, y = resid(lm(ICV ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("MS Raw")
+p_MS_adj = MS_adj %>% ggplot(aes(x = site, y = resid(lm(ICV ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("MS Harmonized")
+p_HC_raw = HC_raw %>% ggplot(aes(x = site, y = resid(lm(ICV ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("HC Raw")
+p_HC_adj = HC_adj %>% ggplot(aes(x = site, y = resid(lm(ICV ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("HC Harmonized")
+
+ggarrange(p_MS_raw, p_MS_adj, p_HC_raw, p_HC_adj, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+
+```{r}
+# Prepare ROIs to plot
+source("src/pair_rois.R")
+sig_rois = readRDS('data/non_linear_rois.rds')
+MS_raw = data.frame(MS_raw, pair_rois(MS_raw, sig_rois))
+MS_adj = data.frame(MS_adj, pair_rois(MS_adj, sig_rois))
+HC_raw = data.frame(HC_raw, pair_rois(HC_raw, sig_rois))
+HC_adj = data.frame(HC_adj, pair_rois(HC_adj, sig_rois))
+```
+
+## Brain Stem: Raw vs Harmonized
+
+```{r}
+# Boxplots
+p_MS_raw = MS_raw %>% ggplot(aes(x = site, y = Brain.Stem, color = site)) + geom_boxplot() + ylab("Brain Stem") + facet_wrap(~sex) + ggtitle("MS Raw")
+p_MS_adj = MS_adj %>% ggplot(aes(x = site, y = Brain.Stem, color = site)) + geom_boxplot() + ylab("Brain Stem") + facet_wrap(~sex) + ggtitle("MS Harmonized")
+p_HC_raw = HC_raw %>% ggplot(aes(x = site, y = Brain.Stem, color = site)) + geom_boxplot() + ylab("Brain Stem") + facet_wrap(~sex) + ggtitle("HC Raw")
+p_HC_adj = HC_adj %>% ggplot(aes(x = site, y = Brain.Stem, color = site)) + geom_boxplot() + ylab("Brain Stem") + facet_wrap(~sex) + ggtitle("HC Harmonized")
+
+ggarrange(p_MS_raw, p_MS_adj, p_HC_raw, p_HC_adj, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## Brain Stem: Raw vs Harmonized (adj for sex and age)
+
+```{r}
+# Boxplots
+p_MS_raw = MS_raw %>% ggplot(aes(x = site, y = resid(lm(Brain.Stem ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Brain Stem") + facet_wrap(~sex) + ggtitle("MS Raw")
+p_MS_adj = MS_adj %>% ggplot(aes(x = site, y = resid(lm(Brain.Stem ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Brain Stem") + facet_wrap(~sex) + ggtitle("MS Harmonized")
+p_HC_raw = HC_raw %>% ggplot(aes(x = site, y = resid(lm(Brain.Stem ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Brain Stem") + facet_wrap(~sex) + ggtitle("HC Raw")
+p_HC_adj = HC_adj %>% ggplot(aes(x = site, y = resid(lm(Brain.Stem ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Brain Stem") + facet_wrap(~sex) + ggtitle("HC Harmonized")
+
+ggarrange(p_MS_raw, p_MS_adj, p_HC_raw, p_HC_adj, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## Cerebellum WM: Raw vs Harmonized
+
+```{r}
+# Boxplots
+p_MS_raw = MS_raw %>% ggplot(aes(x = site, y = Cerebellum.WM, color = site)) + geom_boxplot() + ylab("Cerebellum WM") + facet_wrap(~sex) + ggtitle("MS Raw")
+p_MS_adj = MS_adj %>% ggplot(aes(x = site, y = Cerebellum.WM, color = site)) + geom_boxplot() + ylab("Cerebellum WM") + facet_wrap(~sex) + ggtitle("MS Harmonized")
+p_HC_raw = HC_raw %>% ggplot(aes(x = site, y = Cerebellum.WM, color = site)) + geom_boxplot() + ylab("Cerebellum WM") + facet_wrap(~sex) + ggtitle("HC Raw")
+p_HC_adj = HC_adj %>% ggplot(aes(x = site, y = Cerebellum.WM, color = site)) + geom_boxplot() + ylab("Cerebellum WM") + facet_wrap(~sex) + ggtitle("HC Harmonized")
+
+ggarrange(p_MS_raw, p_MS_adj, p_HC_raw, p_HC_adj, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## Cerebellum WM: Raw vs Harmonized (adj for sex and age)
+
+```{r}
+# Boxplots
+p_MS_raw = MS_raw %>% ggplot(aes(x = site, y = resid(lm(Cerebellum.WM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Cerebellum WM") + facet_wrap(~sex) + ggtitle("MS Raw")
+p_MS_adj = MS_adj %>% ggplot(aes(x = site, y = resid(lm(Cerebellum.WM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Cerebellum WM") + facet_wrap(~sex) + ggtitle("MS Harmonized")
+p_HC_raw = HC_raw %>% ggplot(aes(x = site, y = resid(lm(Cerebellum.WM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Cerebellum WM") + facet_wrap(~sex) + ggtitle("HC Raw")
+p_HC_adj = HC_adj %>% ggplot(aes(x = site, y = resid(lm(Cerebellum.WM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Cerebellum WM") + facet_wrap(~sex) + ggtitle("HC Harmonized")
+
+ggarrange(p_MS_raw, p_MS_adj, p_HC_raw, p_HC_adj, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## Ventral DC: Raw vs Harmonized
+
+```{r}
+# Boxplots
+p_MS_raw = MS_raw %>% ggplot(aes(x = site, y = Ventral.DC, color = site)) + geom_boxplot() + ylab("Ventral DC") + facet_wrap(~sex) + ggtitle("MS Raw")
+p_MS_adj = MS_adj %>% ggplot(aes(x = site, y = Ventral.DC, color = site)) + geom_boxplot() + ylab("Ventral DC") + facet_wrap(~sex) + ggtitle("MS Harmonized")
+p_HC_raw = HC_raw %>% ggplot(aes(x = site, y = Ventral.DC, color = site)) + geom_boxplot() + ylab("Ventral DC") + facet_wrap(~sex) + ggtitle("HC Raw")
+p_HC_adj = HC_adj %>% ggplot(aes(x = site, y = Ventral.DC, color = site)) + geom_boxplot() + ylab("Ventral DC") + facet_wrap(~sex) + ggtitle("HC Harmonized")
+
+ggarrange(p_MS_raw, p_MS_adj, p_HC_raw, p_HC_adj, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## Ventral DC: Raw vs Harmonized (adj for sex and age)
+
+```{r}
+# Boxplots
+p_MS_raw = MS_raw %>% ggplot(aes(x = site, y = resid(lm(Ventral.DC ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Ventral DC") + facet_wrap(~sex) + ggtitle("MS Raw")
+p_MS_adj = MS_adj %>% ggplot(aes(x = site, y = resid(lm(Ventral.DC ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Ventral DC") + facet_wrap(~sex) + ggtitle("MS Harmonized")
+p_HC_raw = HC_raw %>% ggplot(aes(x = site, y = resid(lm(Ventral.DC ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Ventral DC") + facet_wrap(~sex) + ggtitle("HC Raw")
+p_HC_adj = HC_adj %>% ggplot(aes(x = site, y = resid(lm(Ventral.DC ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Ventral DC") + facet_wrap(~sex) + ggtitle("HC Harmonized")
+
+ggarrange(p_MS_raw, p_MS_adj, p_HC_raw, p_HC_adj, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## Fornix: Raw vs Harmonized
+
+```{r}
+# Boxplots
+p_MS_raw = MS_raw %>% ggplot(aes(x = site, y = Fornix, color = site)) + geom_boxplot() + ylab("Fornix") + facet_wrap(~sex) + ggtitle("MS Raw")
+p_MS_adj = MS_adj %>% ggplot(aes(x = site, y = Fornix, color = site)) + geom_boxplot() + ylab("Fornix") + facet_wrap(~sex) + ggtitle("MS Harmonized")
+p_HC_raw = HC_raw %>% ggplot(aes(x = site, y = Fornix, color = site)) + geom_boxplot() + ylab("Fornix") + facet_wrap(~sex) + ggtitle("HC Raw")
+p_HC_adj = HC_adj %>% ggplot(aes(x = site, y = Fornix, color = site)) + geom_boxplot() + ylab("Fornix") + facet_wrap(~sex) + ggtitle("HC Harmonized")
+
+ggarrange(p_MS_raw, p_MS_adj, p_HC_raw, p_HC_adj, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## Fornix: Raw vs Harmonized (adj for sex and age)
+
+```{r}
+p_MS_raw = MS_raw %>% ggplot(aes(x = site, y = resid(lm(Fornix ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Fornix") + facet_wrap(~sex) + ggtitle("MS Raw")
+p_MS_adj = MS_adj %>% ggplot(aes(x = site, y = resid(lm(Fornix ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Fornix") + facet_wrap(~sex) + ggtitle("MS Harmonized")
+p_HC_raw = HC_raw %>% ggplot(aes(x = site, y = resid(lm(Fornix ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Fornix") + facet_wrap(~sex) + ggtitle("HC Raw")
+p_HC_adj = HC_adj %>% ggplot(aes(x = site, y = resid(lm(Fornix ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Fornix") + facet_wrap(~sex) + ggtitle("HC Harmonized")
+
+ggarrange(p_MS_raw, p_MS_adj, p_HC_raw, p_HC_adj, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## Ant. Limb Int. Capsule (ALIC): Raw vs Harmonized
+
+```{r}
+# Boxplots
+p_MS_raw = MS_raw %>% ggplot(aes(x = site, y = Ant.Limb.Int.Capsule, color = site)) + geom_boxplot() + ylab("ALIC") + facet_wrap(~sex) + ggtitle("MS Raw")
+p_MS_adj = MS_adj %>% ggplot(aes(x = site, y = Ant.Limb.Int.Capsule, color = site)) + geom_boxplot() + ylab("ALIC") + facet_wrap(~sex) + ggtitle("MS Harmonized")
+p_HC_raw = HC_raw %>% ggplot(aes(x = site, y = Ant.Limb.Int.Capsule, color = site)) + geom_boxplot() + ylab("ALIC") + facet_wrap(~sex) + ggtitle("HC Raw")
+p_HC_adj = HC_adj %>% ggplot(aes(x = site, y = Ant.Limb.Int.Capsule, color = site)) + geom_boxplot() + ylab("ALIC") + facet_wrap(~sex) + ggtitle("HC Harmonized")
+
+ggarrange(p_MS_raw, p_MS_adj, p_HC_raw, p_HC_adj, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## Ant. Limb Int. Capsule (ALIC): Raw vs Harmonized (adj for sex and age)
+
+```{r}
+# Boxplots
+p_MS_raw = MS_raw %>% ggplot(aes(x = site, y = resid(lm(Ant.Limb.Int.Capsule ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ALIC") + facet_wrap(~sex) + ggtitle("MS Raw")
+p_MS_adj = MS_adj %>% ggplot(aes(x = site, y = resid(lm(Ant.Limb.Int.Capsule ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ALIC") + facet_wrap(~sex) + ggtitle("MS Harmonized")
+p_HC_raw = HC_raw %>% ggplot(aes(x = site, y = resid(lm(Ant.Limb.Int.Capsule ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ALIC") + facet_wrap(~sex) + ggtitle("HC Raw")
+p_HC_adj = HC_adj %>% ggplot(aes(x = site, y = resid(lm(Ant.Limb.Int.Capsule ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ALIC") + facet_wrap(~sex) + ggtitle("HC Harmonized")
+
+ggarrange(p_MS_raw, p_MS_adj, p_HC_raw, p_HC_adj, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## WM: Raw vs Harmonized
+
+```{r}
+# Boxplots
+p_MS_raw = MS_raw %>% ggplot(aes(x = site, y = WM, color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("MS Raw")
+p_MS_adj = MS_adj %>% ggplot(aes(x = site, y = WM, color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("MS Harmonized")
+p_HC_raw = HC_raw %>% ggplot(aes(x = site, y = WM, color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("HC Raw")
+p_HC_adj = HC_adj %>% ggplot(aes(x = site, y = WM, color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("HC Harmonized")
+
+ggarrange(p_MS_raw, p_MS_adj, p_HC_raw, p_HC_adj, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## WM: Raw vs Harmonized (adj for sex and age)
+
+```{r}
+# Boxplots
+p_MS_raw = MS_raw %>% ggplot(aes(x = site, y = resid(lm(WM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("MS Raw")
+p_MS_adj = MS_adj %>% ggplot(aes(x = site, y = resid(lm(WM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("MS Harmonized")
+p_HC_raw = HC_raw %>% ggplot(aes(x = site, y = resid(lm(WM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("HC Raw")
+p_HC_adj = HC_adj %>% ggplot(aes(x = site, y = resid(lm(WM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("HC Harmonized")
+
+ggarrange(p_MS_raw, p_MS_adj, p_HC_raw, p_HC_adj, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## GM: Raw vs Harmonized
+
+```{r}
+# Boxplots
+p_MS_raw = MS_raw %>% ggplot(aes(x = site, y = GM, color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("MS Raw")
+p_MS_adj = MS_adj %>% ggplot(aes(x = site, y = GM, color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("MS Harmonized")
+p_HC_raw = HC_raw %>% ggplot(aes(x = site, y = GM, color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("HC Raw")
+p_HC_adj = HC_adj %>% ggplot(aes(x = site, y = GM, color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("HC Harmonized")
+
+ggarrange(p_MS_raw, p_MS_adj, p_HC_raw, p_HC_adj, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## GM: Raw vs Harmonized (adj for sex and age)
+
+```{r}
+# Boxplots
+p_MS_raw = MS_raw %>% ggplot(aes(x = site, y = resid(lm(GM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("MS Raw")
+p_MS_adj = MS_adj %>% ggplot(aes(x = site, y = resid(lm(GM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("MS Harmonized")
+p_HC_raw = HC_raw %>% ggplot(aes(x = site, y = resid(lm(GM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("HC Raw")
+p_HC_adj = HC_adj %>% ggplot(aes(x = site, y = resid(lm(GM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("HC Harmonized")
+
+ggarrange(p_MS_raw, p_MS_adj, p_HC_raw, p_HC_adj, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## CSF: Raw vs Harmonized
+
+```{r}
+# Boxplots
+p_MS_raw = MS_raw %>% ggplot(aes(x = site, y = CSF, color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("MS Raw")
+p_MS_adj = MS_adj %>% ggplot(aes(x = site, y = CSF, color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("MS Harmonized")
+p_HC_raw = HC_raw %>% ggplot(aes(x = site, y = CSF, color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("HC Raw")
+p_HC_adj = HC_adj %>% ggplot(aes(x = site, y = CSF, color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("HC Harmonized")
+
+ggarrange(p_MS_raw, p_MS_adj, p_HC_raw, p_HC_adj, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## CSF: Raw vs Harmonized (adj for sex and age)
+
+```{r}
+# Boxplots
+p_MS_raw = MS_raw %>% ggplot(aes(x = site, y = resid(lm(CSF ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("MS Raw")
+p_MS_adj = MS_adj %>% ggplot(aes(x = site, y = resid(lm(CSF ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("MS Harmonized")
+p_HC_raw = HC_raw %>% ggplot(aes(x = site, y = resid(lm(CSF ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("HC Raw")
+p_HC_adj = HC_adj %>% ggplot(aes(x = site, y = resid(lm(CSF ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("HC Harmonized")
+
+ggarrange(p_MS_raw, p_MS_adj, p_HC_raw, p_HC_adj, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+
+
+
