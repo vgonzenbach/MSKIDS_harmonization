@@ -24,56 +24,68 @@ library(psych)
 library(pander)
 library(ggpubr)
 library(reshape2)
+source("src/pair_rois.R")
 
 # Load data
 HC_raw = read.csv('data/deriv/HC_data.csv', stringsAsFactors = TRUE)
 HC_adj = read.csv('data/deriv/HC_data_adj-ComBat-GAM.csv', stringsAsFactors = TRUE)
 MS_raw = read.csv('data/deriv/MS_data.csv', stringsAsFactors = TRUE)
 MS_adj = read.csv('data/deriv/MS_data_adj-ComBat-GAM.csv', stringsAsFactors = TRUE)
-dict = read_xlsx("data/MUSE_ROI_Dict.xlsx", 1)
-
-# Improve readibility for ICV
-colnames(HC_raw)[6] = "ICV"
-colnames(HC_adj)[6] = "ICV"
-colnames(MS_raw)[6] = "ICV"
-colnames(MS_adj)[6] = "ICV"
-
-# Shorten Dictionary
-dict = dict[dict$ROI_INDEX %in% 2:300, ]
-
-# Tissue filters
-VN_filter = dict$TISSUE_SEG == "VN"
-GM_filter = dict$TISSUE_SEG == "GM"
-WM_filter = dict$TISSUE_SEG == "WM"
 
 # Filter out PNC
 HC_raw = filter(HC_raw, site != "PNC")
 HC_adj = filter(HC_adj, site != "PNC")
 
+list_df = list(HC_raw, HC_adj, MS_raw, MS_adj)
+
+# Load dictionary
+dict = read_xlsx("data/MUSE_ROI_Dict.xlsx", 1) 
+dict = dict[dict$ROI_INDEX %in% 2:300, ] # Shorten dictionary
+
+# Rename ICV for readibility
+for(i in 1:length(list_df)){
+   colnames(list_df[[i]])[6] = "ICV"
+} 
+
 # Aggregate ROIs
-HC_rois_raw = HC_raw[, 7:ncol(MS_raw)]
-HC_raw$WM = rowSums(HC_rois_raw[, WM_filter])
-HC_raw$GM = rowSums(HC_rois_raw[, GM_filter])
-HC_raw$CSF = rowSums(HC_rois_raw[, VN_filter])
-HC_raw$Brain.Stem = HC_raw$X35
+prep_rois = function(df){
+   library(dplyr)
+   
+   # Load dictionary
+   dict = read_xlsx("data/MUSE_ROI_Dict.xlsx", 1)
+   dict = dict[dict$ROI_INDEX %in% 2:300, ]
+   WM_indexes = paste0("X", dict$ROI_INDEX[dict$TISSUE_SEG == "WM"])
+   GM_indexes = paste0("X", dict$ROI_INDEX[dict$TISSUE_SEG == "GM"])
+   VN_indexes = paste0("X", dict$ROI_INDEX[dict$TISSUE_SEG == "VN"])
 
-HC_rois_adj = HC_adj[, 7:ncol(HC_adj)]
-HC_adj$WM = rowSums(HC_rois_adj[, WM_filter])
-HC_adj$GM = rowSums(HC_rois_adj[, GM_filter])
-HC_adj$CSF = rowSums(HC_rois_adj[, VN_filter])
-HC_adj$Brain.Stem = HC_adj$X35
+   #n Load 
+   sig_rois = readRDS('data/non_linear_rois.rds') # ROIs that exhibit nonlinear effects with age
+   
+   df = df %>% mutate(WM = rowSums(across(WM_indexes)),
+                      GM = rowSums(across(GM_indexes)),
+                      CSF = rowSums(across(VN_indexes)),
+                      Brain.Stem = sig_rois[1],
+                      Cerebellum.WM = rowSums(across(sig_rois[2:3])),
+                      Ventral.DC = rowSums(across(sig_rois[4:5])),
+                      Fornix = rowSums(across(sig_rois[6:7])),
+                      Ant.Limb.Int.Capsule = rowSums(across(sig_rois[8:9])))
+   
+   # Prepare covariates: square age
+   df = df %>% mutate(age2 = (age - mean(age))^2, .after = age)
+   
+   return(df)
+}
 
-MS_rois_raw = MS_raw[, 7:ncol(MS_raw)]
-MS_raw$WM = rowSums(MS_rois_raw[, WM_filter])
-MS_raw$GM = rowSums(MS_rois_raw[, GM_filter])
-MS_raw$CSF = rowSums(MS_rois_raw[, VN_filter])
-MS_raw$Brain.Stem = MS_raw$X35
+list_df = list_df %>% lapply(prep_rois)
 
-MS_rois_adj = MS_adj[, 7:ncol(MS_adj)]
-MS_adj$WM = rowSums(MS_rois_adj[, WM_filter])
-MS_adj$GM = rowSums(MS_rois_adj[, GM_filter])
-MS_adj$CSF = rowSums(MS_rois_adj[, VN_filter])
-MS_adj$Brain.Stem = MS_adj$X35
+HC_raw = list_df[[1]]
+HC_adj = list_df[[2]]
+MS_raw = list_df[[3]]
+MS_adj = list_df[[4]]
+
+# prepare target variables
+roi_small = paste0("X", dict$ROI_INDEX)
+roi_big = colnames(list_df[[1]])[153:160]
 ```
 
 ## IMPORTANT
@@ -94,19 +106,65 @@ img = png::readPNG('docs/batch_exclusion_HC.png')
 grid::grid.raster(img)
 ```
 
-## Dimensions
+## Datasets: MS
  
-MS:  
+MS (dimensions):  
 
-```{r}
+```{r, echo=TRUE}
 dim(MS_adj)
 ```
 
-HC (no PNC):
+MS (count by site)
+```{r}
+MS_adj %>% group_by(site) %>% count()
+```
+
+MS (count by sex)
+```{r}
+MS_adj %>% group_by(sex) %>% count(site)
+```
+
+Totals: Females = `r sum(MS_adj$sex == "FEMALE")`; Males = `r sum(MS_adj$sex == "MALE")`
+
+## Datasets: HC
+
+Dimensions HC (no PNC):
 
 ```{r}
 dim(HC_adj)
 ```
+
+Count per site: 
+```{r}
+HC_raw %>% group_by(site) %>% count()
+```
+
+Count by sex and site:
+```{r}
+HC_raw %>% group_by(site) %>% count(sex)
+```
+
+Totals: Females `r sum(HC_adj$sex == "FEMALE")`; Males `r sum(HC_adj$sex == "MALE")`
+
+## Datasets: HC + MS
+
+Dimensions (no PNC):
+
+```{r}
+dim(rbind(HC_adj, MS_adj))
+```
+
+Count per site: 
+```{r}
+rbind(HC_adj, MS_adj) %>% group_by(site) %>% count()
+```
+
+Count by sex and site:
+```{r}
+rbind(HC_adj, MS_adj) %>% group_by(site) %>% count(sex)
+```
+
+Totals: Females `r sum(HC_adj$sex == "FEMALE")`; Males `r sum(HC_adj$sex == "MALE")`
 
 ## Age across sites
 
@@ -114,93 +172,131 @@ dim(HC_adj)
 MS_raw %>% ggplot(aes(x=site, col=site, y=age)) + geom_boxplot() + facet_wrap(~sex) + xlab("Site") + ylab("Age") + ggtitle("Distribution of MS patients' age across sites")
 ```
 
-
-## Sex Across sites
-
-MS: 
-```{r}
-table(MS_raw$sex, MS_raw$site)
-```
-
-HC:
-```{r}
-table(HC_raw$sex, HC_raw$site)
-```
-
-
-## Site effects: MS Raw
+## Site effects: MS raw
 
 Number of ROIs showing a significant model difference due to accounting for site:
 
 ```{r}
-## ANOVA of all regions
-Ps = matrix(nrow=4, ncol=ncol(MS_rois_raw))
-colnames(Ps) = colnames(MS_rois_raw)
-
-# For MS raw data
-l = MS_rois_raw %>% lapply(function(x) anova(lm(x ~ sex + age + age*sex, data = MS_raw),
-                                      lm(x ~ sex + age + age*sex + site, data = MS_raw)))
-
-for(j in colnames(MS_rois_raw)) Ps[1,j] = l[[j]]$`Pr(>F)`[2]
-
-p = c(sum(Ps[1,] < 0.05),
-      sum(p.adjust(Ps[1,], method = 'bonferroni') < 0.05),
-      sum(p.adjust(Ps[1,], method = 'fdr') < 0.05))
-names(p) = c("MS Raw (Uncorrected P)", "MS Raw (Bonferroni)", "MS Raw (FDR)")
-p %>% pander()
+check_roi_site_fx = function(df, roi_names, mod_sex = TRUE, mod_interaction = TRUE){
+   
+   # Decide formula 
+   if(mod_sex){
+      if(mod_interaction){
+         extract_p = function(x) anova(lm(x ~ sex + age + age2 + age*sex + age2*sex, data = df), 
+                                       lm(x ~ sex + age + age2 + age*sex + age2*sex + site, data = df)
+                                       )$`Pr(>F)`[2]
+      } else {
+         extract_p = function(x) anova(lm(x ~ sex + age + age2, data = df), 
+                                       lm(x ~ sex + age + age2 + site, data = df)
+                                       )$`Pr(>F)`[2]
+      }
+      
+   }else{
+      mod_interaction = FALSE # by necessity
+      extract_p = function(x) anova(lm(x ~ age + age2, data = df), 
+                                    lm(x ~ age + age2 + site, data = df) # x ~ sex + age + age*sex + age2 + age2*sex + site
+                                 )$`Pr(>F)`[2] 
+   }
+   
+   Ps = df %>% select(roi_names) %>% sapply(extract_p)
+   p_count = c(sum(p.adjust(Ps, method = 'fdr') < 0.05),
+               sum(p.adjust(Ps, method = 'bonferroni') < 0.05),
+               sum(Ps < 0.05)
+               )
+   
+   names(p_count) = c("FDR", "Bonferroni", "Uncorrected P")
+   pander(p_count)
+   
+   invisible(Ps)
+}
 ```
+
+
+```{r, echo=TRUE}
+# Full model
+p = check_roi_site_fx(MS_raw, roi_small)
+```
+
+```{r}
+# Without considering sex
+p = check_roi_site_fx(MS_raw, roi_small, mod_sex = FALSE)
+```
+
 
 ## Site effects: MS adj
 
 Number of ROIs showing a significant model difference due to accounting for site:
 
 ```{r}
-# For MS adj data
-l = MS_rois_adj %>% lapply(function(x) anova(lm(x ~ sex + age + age*sex, data = MS_adj),
-                                          lm(x ~ sex + age + age*sex + site, data = MS_adj)))
-
-for(j in colnames(MS_rois_adj)) Ps[2,j] = l[[j]]$`Pr(>F)`[2]
-
-p = c(sum(Ps[2,] < 0.05),
-      sum(p.adjust(Ps[2,], method = 'bonferroni') < 0.05),
-      sum(p.adjust(Ps[2,], method = 'fdr') < 0.05))
-names(p) = c("MS Harmonized (Uncorrected P)", "MS Harmonized (Bonferroni)", "MS Harmonized (FDR)")
-p %>% pander()
+# Full model
+check_roi_site_fx(MS_adj, roi_small)
 ```
 
-## Site effects: HC raw
+```{r}
+# Without considering sex
+p = check_roi_site_fx(MS_adj, roi_small, mod_sex = FALSE)
+```
+
+## Site effects: MS adj (Females)
 
 Number of ROIs showing a significant model difference due to accounting for site:
 
 ```{r}
-# For HC raw data
-l = HC_rois_raw %>% lapply(function(x) anova(lm(x ~ sex + age + age*sex, data = HC_raw),
-                                      lm(x ~ sex + age + age*sex + site, data = HC_raw)))
+filter(MS_adj, sex == "FEMALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE)
+```
 
-for(j in colnames(HC_rois_raw)) Ps[3,j] = l[[j]]$`Pr(>F)`[2]
+## Site effects: MS adj (Males)
 
-p = c(sum(Ps[3,] < 0.05),
-      sum(p.adjust(Ps[3,], method = 'bonferroni') < 0.05),
-      sum(p.adjust(Ps[3,], method = 'fdr') < 0.05))
-names(p) = c("HC Raw (Uncorrected P)", "HC Raw (Bonferroni)", "HC Raw (FDR)")
-p %>% pander()
+Number of ROIs showing a significant model difference due to accounting for site:
+
+```{r}
+filter(MS_adj, sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE)
+```
+
+## Site effects: HC raw
+
+```{r, echo=TRUE}
+# Full model
+p = check_roi_site_fx(HC_raw, roi_small)
+```
+
+```{r}
+# Without considering sex
+p = check_roi_site_fx(HC_raw, roi_small, mod_sex = FALSE)
 ```
 
 ## Site effects: HC adj
 
+Number of ROIs showing a significant model difference due to accounting for site:
+
 ```{r}
-# For HC adj data
-l = HC_rois_adj %>% lapply(function(x) anova(lm(x ~ sex + age + age*sex, data = HC_adj),
-                                          lm(x ~ sex + age + age*sex + site, data = HC_adj)))
-
-for(j in colnames(HC_rois_adj)) Ps[4,j] = l[[j]]$`Pr(>F)`[2]
-
-p = c(sum(Ps[4,] < 0.05),
-      sum(p.adjust(Ps[4,], method = 'bonferroni') < 0.05),
-      sum(p.adjust(Ps[4,], method = 'fdr') < 0.05))
-names(p) = c("HC Harmonized (Uncorrected P)", "HC Harmonized (Bonferroni)", "HC Harmonized (FDR)")
-p %>% pander()
+# Full model
+check_roi_site_fx(HC_adj, roi_small)
 ```
+
+```{r}
+# Without considering sex
+p = check_roi_site_fx(HC_adj, roi_small, mod_sex = FALSE)
+```
+
+## Site effects: HC adj (Females)
+
+Number of ROIs showing a significant model difference due to accounting for site:
+
+```{r}
+filter(HC_adj, sex == "FEMALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE)
+```
+
+## Site effects: HC adj (Males)
+
+Number of ROIs showing a significant model difference due to accounting for site:
+
+```{r}
+filter(HC_adj, sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE)
+```
+
+## Conclusions
+
 
 
 ## ICV: Raw vs Harmonized
@@ -225,17 +321,6 @@ p_HC_raw = HC_raw %>% ggplot(aes(x = site, y = resid(lm(ICV ~ age + sex + age*se
 p_HC_adj = HC_adj %>% ggplot(aes(x = site, y = resid(lm(ICV ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("HC Harmonized")
 
 ggarrange(p_MS_raw, p_MS_adj, p_HC_raw, p_HC_adj, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
-```
-
-
-```{r}
-# Prepare ROIs to plot
-source("src/pair_rois.R")
-sig_rois = readRDS('data/non_linear_rois.rds')
-MS_raw = data.frame(MS_raw, pair_rois(MS_raw, sig_rois))
-MS_adj = data.frame(MS_adj, pair_rois(MS_adj, sig_rois))
-HC_raw = data.frame(HC_raw, pair_rois(HC_raw, sig_rois))
-HC_adj = data.frame(HC_adj, pair_rois(HC_adj, sig_rois))
 ```
 
 ## Brain Stem: Raw vs Harmonized
