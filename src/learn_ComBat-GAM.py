@@ -4,76 +4,62 @@ import pandas as pd
 from neuroHarmonize import harmonizationLearn
 import pickle
 
-MODELS_DIR = os.path.abspath(os.path.join('', '..', 'results/models'))
-DATA_DIR = os.path.abspath(os.path.join('', '..', 'data/deriv'))
+PROJECT_ROOT = "/Users/vgonzenb/PennSIVE/MSKIDS/"
+MODELS_DIR = os.path.join("results", "models")
+DATA_DIR = os.path.join("data", "deriv")
 
-# Load and split data by sex
-data = pd.read_csv(os.path.join(DATA_DIR, 'HC_data.csv'))
-is_male = (data['sex'] == 'MALE').to_list()
-is_female = np.logical_not(is_male)
 
-data_M = data[is_male]
-data_F = data[is_female]
+def harmonize_data(data_file = 'HC_data.csv', mod="GAM", eb=True):
 
-# Prepare covariates
-covars_M = data_M.iloc[:, 2:4] # select site and age
-covars_M.columns = ['SITE', 'AGE']
-covars_F = data_F.iloc[:, 2:4] # select site and age
-covars_F.columns = ['SITE', 'AGE']
+    data = pd.read_csv(os.path.join(PROJECT_ROOT + DATA_DIR, data_file))
 
-# Prepare data for harmonization Step 1
-icv_M = np.array(data_M.iloc[:, 5])
-icv_F = np.array(data_F.iloc[:, 5])
+    # Prepare covariates
+    covars = data.iloc[:, 2:4] # select site, age and sex
+    covars.columns = ['SITE', 'AGE']
+    covars = covars.join(pd.get_dummies(data.sex))
 
-# Run harmonization Step 1
-mod_icv_M, icv_M_adj = harmonizationLearn(np.stack((icv_M, icv_M)).T, covars_M, smooth_terms=['AGE'], eb=False) # stack ICV to fit dimensions required by harmonizationLearn
-mod_icv_F, icv_F_adj = harmonizationLearn(np.stack((icv_F, icv_F)).T, covars_F, smooth_terms=['AGE'], eb=False) 
+    # Prepare data for harmonization Step 1
+    icv = np.array(data.iloc[:, 5])
 
-# prep data for step 2
-covars_M['ICV_adj'] = icv_M_adj[:, 0]
-covars_F['ICV_adj'] = icv_F_adj[:, 0]
+    # Run harmonization Step 1
+    if mod == "GAM":
+        mod_ICV, ICV_adj = harmonizationLearn(np.stack((icv, icv)).T, covars, smooth_terms=['AGE'], eb=False) # stack ICV to fit dimensions required by harmonizationLearn
+    elif mod == "Linear":
+        mod_ICV, ICV_adj = harmonizationLearn(np.stack((icv, icv)).T, covars, eb=False) # stack ICV to fit dimensions required by harmonizationLearn
+    else:
+        print("Please specify a type of model")
+        return None
+    # prep data for step 2
+    covars['ICV_adj'] = ICV_adj[:, 0]
 
-rois_M = np.array(data_M.iloc[:, -145:])
-rois_F = np.array(data_F.iloc[:, -145:])
+    ROIs = np.array(data.iloc[:, -145:])
 
-# run  harmonization Step 2
-mod_rois_M, rois_M_adj = harmonizationLearn(rois_M, covars_M, smooth_terms=['AGE'], eb=True) 
-mod_rois_F, rois_F_adj = harmonizationLearn(rois_F, covars_F, smooth_terms=['AGE'], eb=True)
+    # run  harmonization Step 2
+    if mod == "GAM":
+        mod_ROIs, ROIs_adj = harmonizationLearn(ROIs, covars, smooth_terms=['AGE'], eb=eb) 
+    elif mod == "Linear":
+        mod_ROIs, ROIs_adj = harmonizationLearn(ROIs, covars, eb=eb) 
+    
+    # join data into DataFrame
+    data_adj = pd.concat([data.iloc[:, :5],
+                          pd.DataFrame(ICV_adj[:, 0], 
+                                       index=data.index, 
+                                       columns=[data.columns[5]]
+                                       ),
 
-# join data into DataFrame
-data_M_adj = pd.concat([data_M.iloc[:, :5],
-                        pd.DataFrame(icv_M_adj[:, 0], 
-                                     index=data_M.index, 
-                                     columns=[data_M.columns[5]]
-                                     ),
-                        pd.DataFrame(rois_M_adj, 
-                                     index=data_M.index,
-                                     columns=data_M.columns[-145:]
-                                     )
-                        ], axis=1)
+                          pd.DataFrame(ROIs_adj, 
+                                       index=data.index,
+                                       columns=data.columns[-145:]
+                                       )
+                          ], axis=1)
 
-data_F_adj = pd.concat([data_F.iloc[:, :5],
-                        pd.DataFrame(icv_F_adj[:, 0], 
-                                     index=data_F.index, 
-                                     columns=[data_F.columns[5]]
-                                     ),
-                        pd.DataFrame(rois_F_adj, 
-                                     index=data_F.index,
-                                     columns=data_F.columns[-145:]
-                                     )
-                        ], axis=1)
-                        
-data_adj = pd.concat([data_M_adj, data_F_adj], axis=0).sort_index()
+    # save adjusted DataFrame as .csv
+    data_adj.to_csv(os.path.join(PROJECT_ROOT + DATA_DIR, f'{data_file[:-4]}_adj_split-None_ComBat-{mod}_eb-{eb}.csv'), index=False)
 
-# save adjusted DataFrame as .csv
-data_adj.to_csv(os.path.join(DATA_DIR, 'HC_data_adj-ComBat-GAM.csv'), index=False)
+    # save models for later use
+    with open(os.path.join(PROJECT_ROOT + MODELS_DIR, f'ComBat-{mod}_ICV_from-{data_file[:-4]}_eb-{eb}.pickle'), mode = 'wb') as file:
+        pickle.dump(mod_ICV, file)
+    with open(os.path.join(PROJECT_ROOT + MODELS_DIR, f'ComBat-{mod}_ROIs_from-{data_file[:-4]}_eb-{eb}.pickle'), mode = 'wb') as file:
+        pickle.dump(mod_ROIs, file)    
 
-# save models for later use
-with open(os.path.join(MODELS_DIR, 'ComBat-GAM_icv_M'), mode = 'wb') as file:
-    pickle.dump(mod_icv_M, file)
-with open(os.path.join(MODELS_DIR, 'ComBat-GAM_icv_F'), mode = 'wb') as file:
-    pickle.dump(mod_icv_F, file)
-with open(os.path.join(MODELS_DIR, 'ComBat-GAM_rois_M'), mode = 'wb') as file:
-    pickle.dump(mod_rois_M, file)    
-with open(os.path.join(MODELS_DIR, 'ComBat-GAM_rois_F'), mode = 'wb') as file:
-    pickle.dump(mod_rois_F, file)
+harmonize_data()

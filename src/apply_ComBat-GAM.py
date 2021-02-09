@@ -5,91 +5,70 @@ import numpy as np
 from neuroHarmonize import harmonizationApply
 
 # Specify directories
-DATA_DIR = os.path.abspath(os.path.join('', '..', 'data/deriv'))
-MODELS_DIR = os.path.abspath(os.path.join('', '..', 'results/models'))
+PROJECT_ROOT = "/Users/vgonzenb/PennSIVE/MSKIDS/"
+DATA_DIR = os.path.join("data", "deriv")
+MODELS_DIR = os.path.join("results", "models")
 
-# Load MS data and split by sex
-data = pd.read_csv(os.path.join(DATA_DIR, 'MS_data.csv'))
-is_male = (data['sex'] == 'MALE').to_list()
-is_female = np.logical_not(is_male)
+def apply_harmonization(data_file = "MS_data.csv"):
+    """
+    Applies harmonization from Healthy Controls to MS data. Will become a generalized function for future projects.
+    """
+     # Load MS data and split by sex
+    data = pd.read_csv(os.path.join(PROJECT_ROOT + DATA_DIR, data_file))
 
-data_M = data[is_male]
-data_F = data[is_female]
+    ## Prepare covariates
 
-## Prepare covariates
+    # Load PNC data to match number of sites
+    data_HC = pd.read_csv(os.path.join(PROJECT_ROOT + DATA_DIR, 'HC_data.csv'))
+    
+    a_PNC_male = data_HC[(data_HC.site == "PNC") & (data_HC.sex == "MALE")].iloc[0, :]
+    a_PNC_female = data_HC[(data_HC.site == "PNC") & (data_HC.sex == "FEMALE")].iloc[0, :]
 
-# Load PNC data to match number of sites
-data_PNC = pd.read_csv(os.path.join(DATA_DIR, 'HC_data.csv'))
-a_PNC_male = data_PNC[data_PNC['site'] == 'PNC'].iloc[0, :] # a Male
-a_PNC_female = data_PNC[data_PNC['site'] == 'PNC'].iloc[1, :] # a Female
+    data = data.append(a_PNC_male)
+    data = data.append(a_PNC_female)
 
-data_M = data_M.append(a_PNC_male)
-data_F = data_F.append(a_PNC_female)
+    covars = data.iloc[:, 2:4] # select site, age and sex
+    covars.columns = ['SITE', 'AGE']
+    covars = covars.join(pd.get_dummies(data.sex))
+    
+    ## Prepare data for harmonization Step 1
+    icv = np.array(data.iloc[:, 5])
 
-covars_M = data_M.iloc[:, 2:4] # select site and age
-covars_M.columns = ['SITE', 'AGE']
-covars_F = data_F.iloc[:, 2:4] # select site and age
-covars_F.columns = ['SITE', 'AGE']
+    # Load ICV model for males and females
+    with open(os.path.join(PROJECT_ROOT + MODELS_DIR, 'ComBat-GAM_ICV_from-HC_data_eb-True.pickle'), 'rb') as f:
+        model_icv = pickle.load(f)
 
-## Prepare data for harmonization Step 1
-icv_M = np.array(data_M.iloc[:, 5])
-icv_F = np.array(data_F.iloc[:, 5])
+    # Apply harmonization model Step 1
+    icv_adj = harmonizationApply(icv, covars, model_icv)
 
-# Load ICV model for males and females
-with open(os.path.join(MODELS_DIR, 'ComBat-GAM_icv_M'), 'rb') as f:
-    model_icv_M = pickle.load(f)
-with open(os.path.join(MODELS_DIR, 'ComBat-GAM_icv_F'), 'rb') as f:
-    model_icv_F = pickle.load(f)
+    ## Prepare data for harmonization Step 2
+    covars['ICV_adj'] = icv_adj[:, 0]
 
-# Apply harmonization model Step 1
-icv_M_adj = harmonizationApply(icv_M, covars_M, model_icv_M)
-icv_F_adj = harmonizationApply(icv_F, covars_F, model_icv_F)
+    ROIs = np.array(data.iloc[:, -145:])
 
-## Prepare data for harmonization Step 2
-covars_M['ICV_adj'] = icv_M_adj[:, 0]
-covars_F['ICV_adj'] = icv_F_adj[:, 0]
+    # Load ROI model for males and females
+    with open(os.path.join(PROJECT_ROOT + MODELS_DIR, 'ComBat-GAM_ROIs_from-HC_data_eb-True.pickle'), 'rb') as f:
+        model_ROIs = pickle.load(f)
 
-rois_M = np.array(data_M.iloc[:, -145:])
-rois_F = np.array(data_F.iloc[:, -145:])
+    # run  harmonization Step 2
+    ROIs_adj = harmonizationApply(ROIs, covars, model_ROIs) 
 
-# Load ROI model for males and females
-with open(os.path.join(MODELS_DIR, 'ComBat-GAM_rois_M'), 'rb') as f:
-    model_rois_M = pickle.load(f)
-with open(os.path.join(MODELS_DIR, 'ComBat-GAM_rois_F'), 'rb') as f:
-    model_rois_F = pickle.load(f)
+    # join data into DataFrame
+    data_adj = pd.concat([data.iloc[:, :5], # Demographics
+                          pd.DataFrame(icv_adj[:, 0],  # ICV
+                                       index=data.index, 
+                                       columns=[data.columns[5]]
+                                       ),
+                          pd.DataFrame(ROIs_adj,  # ROIS
+                                       index=data.index,
+                                       columns=data.columns[-145:]
+                                       )
+                            ], axis=1)
 
-# run  harmonization Step 2
-rois_M_adj = harmonizationApply(rois_M, covars_M, model_rois_M) 
-rois_F_adj = harmonizationApply(rois_F, covars_F, model_rois_F)
+    # drop PNC rows from data to save
+    data_adj = data_adj.drop(index = data_adj.index[-2:])
+    
+    # save adjusted DataFrame as .csv
+    data_adj.to_csv(os.path.join(PROJECT_ROOT + DATA_DIR, 'MS_data_adj-ComBat-GAM_from-HC_split-None_eb-True.csv'), index=False)
 
-# join data into DataFrame
-data_M_adj = pd.concat([data_M.iloc[:, :5], # Demographics
-                        pd.DataFrame(icv_M_adj[:, 0],  # ICV
-                                     index=data_M.index, 
-                                     columns=[data_M.columns[5]]
-                                     ),
-                        pd.DataFrame(rois_M_adj,  # ROIS
-                                     index=data_M.index,
-                                     columns=data_M.columns[-145:]
-                                     )
-                        ], axis=1)
-
-data_F_adj = pd.concat([data_F.iloc[:, :5],
-                        pd.DataFrame(icv_F_adj[:, 0], 
-                                     index=data_F.index, 
-                                     columns=[data_F.columns[5]]
-                                     ),
-                        pd.DataFrame(rois_F_adj, 
-                                     index=data_F.index,
-                                     columns=data_F.columns[-145:]
-                                     )
-                        ], axis=1)
-                        
-# concatenate Data Frame for Males and Females
-data_adj = pd.concat([data_M_adj, data_F_adj], axis=0).sort_index()
-
-# drop PNC rows from data to save
-data_adj = data_adj.drop(index = [data_M_adj.index[-1], data_F_adj.index[-1]])
-
-# save adjusted DataFrame as .csv
-data_adj.to_csv(os.path.join(DATA_DIR, 'MS_data_adj-ComBat-GAM.csv'), index=False)
+apply_harmonization()
