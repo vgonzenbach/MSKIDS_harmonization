@@ -54,7 +54,7 @@ def harmonize_data(data_file = 'HC_data.csv', mod="GAM", eb=True):
                           ], axis=1)
 
     # save adjusted DataFrame as .csv
-    data_adj.to_csv(os.path.join(PROJECT_ROOT + DATA_DIR, f'{data_file[:-4]}_adj_split-None_ComBat-{mod}_eb-{eb}.csv'), index=False)
+    data_adj.to_csv(os.path.join(PROJECT_ROOT + DATA_DIR, f'{data_file[:-4]}_adj_ComBat-{mod}_split-None_eb-{eb}.csv'), index=False)
 
     # save models for later use
     with open(os.path.join(PROJECT_ROOT + MODELS_DIR, f'ComBat-{mod}_ICV_from-{data_file[:-4]}_eb-{eb}.pickle'), mode = 'wb') as file:

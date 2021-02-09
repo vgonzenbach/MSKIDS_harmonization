@@ -1,0 +1,255 @@
+---
+title: "plot_adj_data.Rmd"
+author: "Virgilio Gonzenbach"
+date: "2/8/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      cache = FALSE, 
+                      cache.path = 'cache/plot_adj_data/', 
+                      fig.path = "figures/plot_adj_data/")
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
+
+```{r, include=FALSE}
+library(tidyverse) # dplyr and ggplot
+library(readxl)
+library(psych) 
+library(pander)
+library(ggpubr)
+library(reshape2)
+
+# Load data
+list_df = readRDS("tmp/list_of_df.rds")
+
+dict = read_xlsx("data/MUSE_ROI_Dict.xlsx", 1) 
+dict = dict[dict$ROI_INDEX %in% 2:300, ] # Shorten dictionary
+
+roi_small = paste0("X", dict$ROI_INDEX)
+roi_big = colnames(list_df[[1]])[153:160]
+
+HC_split = list_df[[1]]
+HC_whole = list_df[[2]]
+MS_split = list_df[[3]]
+MS_whole = list_df[[4]]
+```
+
+## ICV
+
+```{r}
+# Boxplots
+p_MS_split = MS_split %>% ggplot(aes(x = site, y = ICV, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("MS [Split M/F]")
+p_MS_whole = MS_whole %>% ggplot(aes(x = site, y = ICV, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("MS [no split]")
+p_HC_split = HC_split %>% ggplot(aes(x = site, y = ICV, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("HC [split M/F]")
+p_HC_whole = HC_whole %>% ggplot(aes(x = site, y = ICV, color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("HC [no split]")
+
+ggarrange(p_MS_split, p_MS_whole, p_HC_split, p_HC_whole, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## ICV (adj for sex and age)
+
+```{r}
+# Visualize ICV All and MF
+p_MS_split = MS_split %>% ggplot(aes(x = site, y = resid(lm(ICV ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("MS [Split M/F]")
+p_MS_whole = MS_whole %>% ggplot(aes(x = site, y = resid(lm(ICV ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("MS [no split]")
+p_HC_split = HC_split %>% ggplot(aes(x = site, y = resid(lm(ICV ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("HC [split M/F]")
+p_HC_whole = HC_whole %>% ggplot(aes(x = site, y = resid(lm(ICV ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ICV") + facet_wrap(~sex) + ggtitle("HC [no split]")
+
+ggarrange(p_MS_split, p_MS_whole, p_HC_split, p_HC_whole, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## Brain Stem
+
+```{r}
+# Boxplots
+p_MS_split = MS_split %>% ggplot(aes(x = site, y = Brain.Stem, color = site)) + geom_boxplot() + ylab("Brain Stem") + facet_wrap(~sex) + ggtitle("MS [Split M/F]")
+p_MS_whole = MS_whole %>% ggplot(aes(x = site, y = Brain.Stem, color = site)) + geom_boxplot() + ylab("Brain Stem") + facet_wrap(~sex) + ggtitle("MS [no split]")
+p_HC_split = HC_split %>% ggplot(aes(x = site, y = Brain.Stem, color = site)) + geom_boxplot() + ylab("Brain Stem") + facet_wrap(~sex) + ggtitle("HC [split M/F]")
+p_HC_whole = HC_whole %>% ggplot(aes(x = site, y = Brain.Stem, color = site)) + geom_boxplot() + ylab("Brain Stem") + facet_wrap(~sex) + ggtitle("HC [no split]")
+
+ggarrange(p_MS_split, p_MS_whole, p_HC_split, p_HC_whole, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## Brain Stem (adj for sex and age)
+
+```{r}
+# Boxplots
+p_MS_split = MS_split %>% ggplot(aes(x = site, y = resid(lm(Brain.Stem ~ age + sex + age*sex, data = MS_split)), color = site)) + geom_boxplot() + ylab("Brain Stem") + facet_wrap(~sex) + ggtitle("MS [Split M/F]")
+p_MS_whole = MS_whole %>% ggplot(aes(x = site, y = resid(lm(Brain.Stem ~ age + sex + age*sex, data = MS_whole)), color = site)) + geom_boxplot() + ylab("Brain Stem") + facet_wrap(~sex) + ggtitle("MS [no split]")
+p_HC_split = HC_split %>% ggplot(aes(x = site, y = resid(lm(Brain.Stem ~ age + sex + age*sex, data = HC_split)), color = site)) + geom_boxplot() + ylab("Brain Stem") + facet_wrap(~sex) + ggtitle("HC [split M/F]")
+p_HC_whole = HC_whole %>% ggplot(aes(x = site, y = resid(lm(Brain.Stem ~ age + sex + age*sex, data = HC_whole)), color = site)) + geom_boxplot() + ylab("Brain Stem") + facet_wrap(~sex) + ggtitle("HC [no split]")
+
+ggarrange(p_MS_split, p_MS_whole, p_HC_split, p_HC_whole, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## Cerebellum WM
+
+```{r}
+# Boxplots
+p_MS_split = MS_split %>% ggplot(aes(x = site, y = Cerebellum.WM, color = site)) + geom_boxplot() + ylab("Cerebellum WM") + facet_wrap(~sex) + ggtitle("MS [Split M/F]")
+p_MS_whole = MS_whole %>% ggplot(aes(x = site, y = Cerebellum.WM, color = site)) + geom_boxplot() + ylab("Cerebellum WM") + facet_wrap(~sex) + ggtitle("MS [no split]")
+p_HC_split = HC_split %>% ggplot(aes(x = site, y = Cerebellum.WM, color = site)) + geom_boxplot() + ylab("Cerebellum WM") + facet_wrap(~sex) + ggtitle("HC [split M/F]")
+p_HC_whole = HC_whole %>% ggplot(aes(x = site, y = Cerebellum.WM, color = site)) + geom_boxplot() + ylab("Cerebellum WM") + facet_wrap(~sex) + ggtitle("HC [no split]")
+
+ggarrange(p_MS_split, p_MS_whole, p_HC_split, p_HC_whole, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## Cerebellum WM (adj for sex and age)
+
+```{r}
+# Boxplots
+p_MS_split = MS_split %>% ggplot(aes(x = site, y = resid(lm(Cerebellum.WM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Cerebellum WM") + facet_wrap(~sex) + ggtitle("MS [Split M/F]")
+p_MS_whole = MS_whole %>% ggplot(aes(x = site, y = resid(lm(Cerebellum.WM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Cerebellum WM") + facet_wrap(~sex) + ggtitle("MS [no split]")
+p_HC_split = HC_split %>% ggplot(aes(x = site, y = resid(lm(Cerebellum.WM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Cerebellum WM") + facet_wrap(~sex) + ggtitle("HC [split M/F]")
+p_HC_whole = HC_whole %>% ggplot(aes(x = site, y = resid(lm(Cerebellum.WM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Cerebellum WM") + facet_wrap(~sex) + ggtitle("HC [no split]")
+
+ggarrange(p_MS_split, p_MS_whole, p_HC_split, p_HC_whole, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## Ventral DC
+
+```{r}
+# Boxplots
+p_MS_split = MS_split %>% ggplot(aes(x = site, y = Ventral.DC, color = site)) + geom_boxplot() + ylab("Ventral DC") + facet_wrap(~sex) + ggtitle("MS [Split M/F]")
+p_MS_whole = MS_whole %>% ggplot(aes(x = site, y = Ventral.DC, color = site)) + geom_boxplot() + ylab("Ventral DC") + facet_wrap(~sex) + ggtitle("MS [no split]")
+p_HC_split = HC_split %>% ggplot(aes(x = site, y = Ventral.DC, color = site)) + geom_boxplot() + ylab("Ventral DC") + facet_wrap(~sex) + ggtitle("HC [split M/F]")
+p_HC_whole = HC_whole %>% ggplot(aes(x = site, y = Ventral.DC, color = site)) + geom_boxplot() + ylab("Ventral DC") + facet_wrap(~sex) + ggtitle("HC [no split]")
+
+ggarrange(p_MS_split, p_MS_whole, p_HC_split, p_HC_whole, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## Ventral DC (adj for sex and age)
+
+```{r}
+# Boxplots
+p_MS_split = MS_split %>% ggplot(aes(x = site, y = resid(lm(Ventral.DC ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Ventral DC") + facet_wrap(~sex) + ggtitle("MS [Split M/F]")
+p_MS_whole = MS_whole %>% ggplot(aes(x = site, y = resid(lm(Ventral.DC ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Ventral DC") + facet_wrap(~sex) + ggtitle("MS [no split]")
+p_HC_split = HC_split %>% ggplot(aes(x = site, y = resid(lm(Ventral.DC ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Ventral DC") + facet_wrap(~sex) + ggtitle("HC [split M/F]")
+p_HC_whole = HC_whole %>% ggplot(aes(x = site, y = resid(lm(Ventral.DC ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Ventral DC") + facet_wrap(~sex) + ggtitle("HC [no split]")
+
+ggarrange(p_MS_split, p_MS_whole, p_HC_split, p_HC_whole, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## Fornix
+
+```{r}
+# Boxplots
+p_MS_split = MS_split %>% ggplot(aes(x = site, y = Fornix, color = site)) + geom_boxplot() + ylab("Fornix") + facet_wrap(~sex) + ggtitle("MS [Split M/F]")
+p_MS_whole = MS_whole %>% ggplot(aes(x = site, y = Fornix, color = site)) + geom_boxplot() + ylab("Fornix") + facet_wrap(~sex) + ggtitle("MS [no split]")
+p_HC_split = HC_split %>% ggplot(aes(x = site, y = Fornix, color = site)) + geom_boxplot() + ylab("Fornix") + facet_wrap(~sex) + ggtitle("HC [split M/F]")
+p_HC_whole = HC_whole %>% ggplot(aes(x = site, y = Fornix, color = site)) + geom_boxplot() + ylab("Fornix") + facet_wrap(~sex) + ggtitle("HC [no split]")
+
+ggarrange(p_MS_split, p_MS_whole, p_HC_split, p_HC_whole, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## Fornix (adj for sex and age)
+
+```{r}
+p_MS_split = MS_split %>% ggplot(aes(x = site, y = resid(lm(Fornix ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Fornix") + facet_wrap(~sex) + ggtitle("MS [Split M/F]")
+p_MS_whole = MS_whole %>% ggplot(aes(x = site, y = resid(lm(Fornix ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Fornix") + facet_wrap(~sex) + ggtitle("MS [no split]")
+p_HC_split = HC_split %>% ggplot(aes(x = site, y = resid(lm(Fornix ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Fornix") + facet_wrap(~sex) + ggtitle("HC [split M/F]")
+p_HC_whole = HC_whole %>% ggplot(aes(x = site, y = resid(lm(Fornix ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("Fornix") + facet_wrap(~sex) + ggtitle("HC [no split]")
+
+ggarrange(p_MS_split, p_MS_whole, p_HC_split, p_HC_whole, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## Ant. Limb Int. Capsule (ALIC)
+
+```{r}
+# Boxplots
+p_MS_split = MS_split %>% ggplot(aes(x = site, y = Ant.Limb.Int.Capsule, color = site)) + geom_boxplot() + ylab("ALIC") + facet_wrap(~sex) + ggtitle("MS [Split M/F]")
+p_MS_whole = MS_whole %>% ggplot(aes(x = site, y = Ant.Limb.Int.Capsule, color = site)) + geom_boxplot() + ylab("ALIC") + facet_wrap(~sex) + ggtitle("MS [no split]")
+p_HC_split = HC_split %>% ggplot(aes(x = site, y = Ant.Limb.Int.Capsule, color = site)) + geom_boxplot() + ylab("ALIC") + facet_wrap(~sex) + ggtitle("HC [split M/F]")
+p_HC_whole = HC_whole %>% ggplot(aes(x = site, y = Ant.Limb.Int.Capsule, color = site)) + geom_boxplot() + ylab("ALIC") + facet_wrap(~sex) + ggtitle("HC [no split]")
+
+ggarrange(p_MS_split, p_MS_whole, p_HC_split, p_HC_whole, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## Ant. Limb Int. Capsule (adj for sex and age)
+
+```{r}
+# Boxplots
+p_MS_split = MS_split %>% ggplot(aes(x = site, y = resid(lm(Ant.Limb.Int.Capsule ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ALIC") + facet_wrap(~sex) + ggtitle("MS [Split M/F]")
+p_MS_whole = MS_whole %>% ggplot(aes(x = site, y = resid(lm(Ant.Limb.Int.Capsule ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ALIC") + facet_wrap(~sex) + ggtitle("MS [no split]")
+p_HC_split = HC_split %>% ggplot(aes(x = site, y = resid(lm(Ant.Limb.Int.Capsule ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ALIC") + facet_wrap(~sex) + ggtitle("HC [split M/F]")
+p_HC_split = HC_split %>% ggplot(aes(x = site, y = resid(lm(Ant.Limb.Int.Capsule ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("ALIC") + facet_wrap(~sex) + ggtitle("HC [no split]")
+
+ggarrange(p_MS_split, p_MS_whole, p_HC_split, p_HC_whole, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## WM
+
+```{r}
+# Boxplots
+p_MS_split = MS_split %>% ggplot(aes(x = site, y = WM, color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("MS [Split M/F]")
+p_MS_whole = MS_whole %>% ggplot(aes(x = site, y = WM, color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("MS [no split]")
+p_HC_split = HC_split %>% ggplot(aes(x = site, y = WM, color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("HC [split M/F]")
+p_HC_whole = HC_whole %>% ggplot(aes(x = site, y = WM, color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("HC [no split]")
+
+ggarrange(p_MS_split, p_MS_whole, p_HC_split, p_HC_whole, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## WM
+
+```{r}
+# Boxplots
+p_MS_split = MS_split %>% ggplot(aes(x = site, y = resid(lm(WM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("MS [Split M/F]")
+p_MS_whole = MS_whole %>% ggplot(aes(x = site, y = resid(lm(WM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("MS [no split]")
+p_HC_split = HC_split %>% ggplot(aes(x = site, y = resid(lm(WM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("HC [split M/F]")
+p_HC_whole = HC_whole %>% ggplot(aes(x = site, y = resid(lm(WM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("WM") + facet_wrap(~sex) + ggtitle("HC [no split]")
+
+ggarrange(p_MS_split, p_MS_whole, p_HC_split, p_HC_whole, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## GM
+
+```{r}
+# Boxplots
+p_MS_split = MS_split %>% ggplot(aes(x = site, y = GM, color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("MS [Split M/F]")
+p_MS_whole = MS_whole %>% ggplot(aes(x = site, y = GM, color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("MS [no split]")
+p_HC_split = HC_split %>% ggplot(aes(x = site, y = GM, color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("HC [split M/F]")
+p_HC_whole = HC_whole %>% ggplot(aes(x = site, y = GM, color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("HC [no split]")
+
+ggarrange(p_MS_split, p_MS_whole, p_HC_split, p_HC_whole, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## GM
+
+```{r}
+# Boxplots
+p_MS_split = MS_split %>% ggplot(aes(x = site, y = resid(lm(GM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("MS [Split M/F]")
+p_MS_whole = MS_whole %>% ggplot(aes(x = site, y = resid(lm(GM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("MS [no split]")
+p_HC_split = HC_split %>% ggplot(aes(x = site, y = resid(lm(GM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("HC [split M/F]")
+p_HC_whole = HC_whole %>% ggplot(aes(x = site, y = resid(lm(GM ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("GM") + facet_wrap(~sex) + ggtitle("HC [no split]")
+
+ggarrange(p_MS_split, p_MS_whole, p_HC_split, p_HC_whole, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## CSF
+
+```{r}
+# Boxplots
+p_MS_split = MS_split %>% ggplot(aes(x = site, y = CSF, color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("MS [Split M/F]")
+p_MS_whole = MS_whole %>% ggplot(aes(x = site, y = CSF, color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("MS [no split]")
+p_HC_split = HC_split %>% ggplot(aes(x = site, y = CSF, color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("HC [split M/F]")
+p_HC_whole = HC_whole %>% ggplot(aes(x = site, y = CSF, color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("HC [no split]")
+
+ggarrange(p_MS_split, p_MS_whole, p_HC_split, p_HC_whole, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+## CSF
+
+```{r}
+# Boxplots
+p_MS_split = MS_split %>% ggplot(aes(x = site, y = resid(lm(CSF ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("MS [Split M/F]")
+p_MS_whole = MS_whole %>% ggplot(aes(x = site, y = resid(lm(CSF ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("MS [no split]")
+p_HC_split = HC_split %>% ggplot(aes(x = site, y = resid(lm(CSF ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("HC [split M/F]")
+p_HC_whole = HC_whole %>% ggplot(aes(x = site, y = resid(lm(CSF ~ age + sex + age*sex)), color = site)) + geom_boxplot() + ylab("CSF") + facet_wrap(~sex) + ggtitle("HC [no split]")
+
+ggarrange(p_MS_split, p_MS_whole, p_HC_split, p_HC_whole, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+
+
