@@ -30,6 +30,9 @@ def harmonize_data_by_sex(data_file = 'HC_data.csv', mod="GAM", eb=True):
         mod_icv_M, icv_M_adj = harmonizationLearn(np.stack((icv_M, icv_M)).T, covars_M, smooth_terms=['AGE'], eb=False) # stack ICV to fit dimensions required by harmonizationLearn
         mod_icv_F, icv_F_adj = harmonizationLearn(np.stack((icv_F, icv_F)).T, covars_F, smooth_terms=['AGE'], eb=False) 
     elif mod == "Linear":
+        covars_M["AGE_SQUARED"] = (covars_M.AGE - covars_M.AGE.mean()) ** 2 # center before squaring (second moment)
+        covars_F["AGE_SQUARED"] = (covars_F.AGE - covars_F.AGE.mean()) ** 2
+
         mod_icv_M, icv_M_adj = harmonizationLearn(np.stack((icv_M, icv_M)).T, covars_M, eb=False) # stack ICV to fit dimensions required by harmonizationLearn
         mod_icv_F, icv_F_adj = harmonizationLearn(np.stack((icv_F, icv_F)).T, covars_F, eb=False) 
     else:
@@ -89,4 +92,4 @@ def harmonize_data_by_sex(data_file = 'HC_data.csv', mod="GAM", eb=True):
     with open(os.path.join(PROJECT_ROOT + MODELS_DIR, f'ComBat-{mod}_ROIs_from-{data_file[:-4]}_FEMALE_eb-{eb}.pickle'), mode = 'wb') as file:
         pickle.dump(mod_rois_F, file)
 
-harmonize_data_by_sex()
+harmonize_data_by_sex(mod="Linear")

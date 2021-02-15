@@ -1,7 +1,7 @@
 ---
-title: "EDA: MS ComBat-GAM"
+title: "EDA: MS ComBat GAM vs Linear"
 author: "Virgilio Gonzenbach"
-date: "1/22/2021"
+date: "2/13/2021"
 output: beamer_presentation
 ---
 
@@ -15,7 +15,7 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 
 ## Objective
 
-To visualize effects of ComBat-GAM applied on the MS data relative to the raw MS data.
+To compare effects of applying ComBat-GAM vs ComBat-Linear in the MS data.
 
 ```{r, include=FALSE}
 library(tidyverse) # dplyr and ggplot
@@ -27,16 +27,16 @@ library(ggpubr)
 library(reshape2)
 
 # Load data
-HC_split = read.csv('data/deriv/HC_data_adj_ComBat-GAM_split-MF_eb-True.csv', stringsAsFactors = TRUE)
-HC_whole = read.csv('data/deriv/HC_data_adj_ComBat-GAM_split-None_eb-True.csv', stringsAsFactors = TRUE)
-MS_split = read.csv('data/deriv/MS_data_adj-ComBat-GAM_from-HC_split-MF_eb-True.csv', stringsAsFactors = TRUE)
-MS_whole = read.csv('data/deriv/MS_data_adj-ComBat-GAM_from-HC_split-None_eb-True.csv', stringsAsFactors = TRUE)
+HC_GAM = read.csv('data/deriv/HC_data_adj_ComBat-GAM_split-MF_eb-True.csv', stringsAsFactors = TRUE)
+HC_Lin = read.csv('data/deriv/HC_data_adj_ComBat-Linear_split-MF_eb-True.csv', stringsAsFactors = TRUE)
+MS_GAM = read.csv('data/deriv/MS_data_adj-ComBat-GAM_from-HC_split-MF_eb-True.csv', stringsAsFactors = TRUE)
+MS_Lin = read.csv('data/deriv/MS_data_adj-ComBat-Linear_from-HC_split-MF_eb-True.csv', stringsAsFactors = TRUE)
 
 # Filter out PNC
-HC_split = filter(HC_split, site != "PNC")
-HC_whole = filter(HC_whole, site != "PNC")
+HC_GAM = filter(HC_GAM, site != "PNC")
+HC_Lin = filter(HC_Lin, site != "PNC")
 
-list_df = list(HC_split = HC_split, HC_whole = HC_whole, MS_split = MS_split, MS_whole = MS_whole)
+list_df = list(HC_GAM = HC_GAM, HC_Lin = HC_Lin, MS_GAM = MS_GAM, MS_Lin = MS_Lin)
 
 # Load dictionary
 dict = read_xlsx("data/MUSE_ROI_Dict.xlsx", 1) 
@@ -78,10 +78,10 @@ prep_rois = function(df){
 
 list_df = list_df %>% lapply(prep_rois)
 
-HC_split = list_df[[1]]
-HC_whole = list_df[[2]]
-MS_split = list_df[[3]]
-MS_whole = list_df[[4]]
+HC_GAM = list_df[[1]]
+HC_Lin = list_df[[2]]
+MS_GAM = list_df[[3]]
+MS_Lin = list_df[[4]]
 
 # prepare target variables
 roi_small = paste0("X", dict$ROI_INDEX)
@@ -113,78 +113,78 @@ grid::grid.raster(img)
 MS (dimensions):  
 
 ```{r}
-dim(MS_whole)
+dim(MS_Lin)
 ```
 
 MS (count by site)
 ```{r}
-MS_whole %>% group_by(site) %>% count() %>% pander()
+MS_Lin %>% group_by(site) %>% count() %>% pander()
 ```
 
 MS (count by sex)
 ```{r}
-MS_whole %>% group_by(sex) %>% count(site) %>% pander()
+MS_Lin %>% group_by(sex) %>% count(site) %>% pander()
 ```
 
-Totals: Females = `r sum(MS_whole$sex == "FEMALE")`; Males = `r sum(MS_whole$sex == "MALE")`
+Totals: Females = `r sum(MS_Lin$sex == "FEMALE")`; Males = `r sum(MS_Lin$sex == "MALE")`
 
 ## Datasets: HC
 
 Dimensions HC (no PNC):
 
 ```{r}
-dim(HC_whole)
+dim(HC_Lin)
 ```
 
 Count per site: 
 ```{r}
-HC_split %>% group_by(site) %>% count() %>% kable()
+HC_GAM %>% group_by(site) %>% count() %>% kable()
 ```
 
 Count by sex and site:
 ```{r}
-HC_split %>% group_by(site) %>% count(sex) %>% kable()
+HC_GAM %>% group_by(site) %>% count(sex) %>% kable()
 ```
 
-Totals: Females `r sum(HC_whole$sex == "FEMALE")`; Males `r sum(HC_whole$sex == "MALE")`
+Totals: Females `r sum(HC_Lin$sex == "FEMALE")`; Males `r sum(HC_Lin$sex == "MALE")`
 
 ## Datasets: HC + MS
 
 Dimensions (no PNC):
 
 ```{r}
-dim(rbind(HC_whole, MS_whole))
+dim(rbind(HC_Lin, MS_Lin))
 ```
 
 Count per site: 
 ```{r}
-rbind(HC_whole, MS_whole) %>% group_by(site) %>% count() %>% kable()
+rbind(HC_Lin, MS_Lin) %>% group_by(site) %>% count() %>% kable()
 ```
 
 Count by sex and site:
 ```{r}
-rbind(HC_whole, MS_whole) %>% group_by(site) %>% count(sex) %>% kable()
+rbind(HC_Lin, MS_Lin) %>% group_by(site) %>% count(sex) %>% kable()
 ```
 
-Totals: Females `r sum(HC_whole$sex == "FEMALE")`; Males `r sum(HC_whole$sex == "MALE")`
+Totals: Females `r sum(HC_Lin$sex == "FEMALE")`; Males `r sum(HC_Lin$sex == "MALE")`
 
 ## Age across sites [MS]
 
 ```{r}
-MS_split %>% ggplot(aes(x=site, col=site, y=age)) + geom_boxplot() + facet_wrap(~sex) + xlab("Site") + ylab("Age") + ggtitle("Age distribution of MS patients across sites")
+MS_GAM %>% ggplot(aes(x=site, col=site, y=age)) + geom_boxplot() + facet_wrap(~sex) + xlab("Site") + ylab("Age") + ggtitle("Age distribution of MS patients across sites")
 ```
 
 ## Age across sites [HC]
 
 ```{r}
-HC_split %>% ggplot(aes(x=site, col=site, y=age)) + geom_boxplot() + facet_wrap(~sex) + xlab("Site") + ylab("Age") + ggtitle("Age distribution of Healthy Controls across sites")
+HC_GAM %>% ggplot(aes(x=site, col=site, y=age)) + geom_boxplot() + facet_wrap(~sex) + xlab("Site") + ylab("Age") + ggtitle("Age distribution of Healthy Controls across sites")
 ```
 
 ## Harmonization Approach
 
 Adjusted data are shown for the following approach:  
 * Split the HC data into males and females  
-* Run ComBat-GAM on both datasets.  
+* Run ComBat (GAM or Linear) on both datasets.  
 * Apply resulting models to MS data in males and females respectively.  
 
 ## Checking site effects
@@ -195,7 +195,7 @@ For full datasets, either sex and interactions terms (x ~ sex + age + age2 + age
 
 For datasets split by sex, only age terms were included.
 
-## Site effects: MS [split M/F]
+## Site effects: MS [GAM]
 
 ```{r}
 check_roi_site_fx = function(df, roi_names, mod_sex = TRUE, mod_interaction = TRUE){
@@ -236,116 +236,117 @@ Number of ROIs showing site effects:
 Full covariate model: 
 ```{r}
 # Full model
-check_roi_site_fx(MS_split, roi_small) %>% pander()
+check_roi_site_fx(MS_GAM, roi_small) %>% pander()
 ```
 
 Sex not considered:
 ```{r}
 # Without considering sex
-check_roi_site_fx(MS_split, roi_small, mod_sex = FALSE) %>% pander()
+check_roi_site_fx(MS_GAM, roi_small, mod_sex = FALSE) %>% pander()
 ```
 
-## Site effects: MS [no split]
+## Site effects by sex: MS [GAM]
+
+Females: 
+
+```{r}
+filter(MS_GAM, sex == "FEMALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+```
+
+Males:
+
+```{r}
+filter(MS_GAM, sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+```
+
+
+## Site effects: MS [Linear]
 
 Full covariate model: 
 ```{r}
 # Full model
-check_roi_site_fx(MS_whole, roi_small) %>% pander()
+check_roi_site_fx(MS_Lin, roi_small) %>% pander()
 ```
 
 
 Sex not considered:
 ```{r}
 # Without considering sex
-check_roi_site_fx(MS_whole, roi_small, mod_sex = FALSE) %>% pander()
+check_roi_site_fx(MS_Lin, roi_small, mod_sex = FALSE) %>% pander()
 ```
 
-## Site effects by sex: MS [M/F split]
+## Site effects by sex: MS [Linear]
 
 Females: 
 
 ```{r}
-filter(MS_whole, sex == "FEMALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+filter(MS_Lin, sex == "FEMALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
 
 Males:
 
 ```{r}
-filter(MS_whole, sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+filter(MS_Lin, sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
 
-## Site effects by sex: MS [no split]
-
-Females: 
-
-```{r}
-filter(MS_whole, sex == "FEMALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
-```
-
-Males:
-
-```{r}
-filter(MS_whole, sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
-```
-
-## Site effects: HC [split M/F]
+## Site effects: HC [GAM]
 
 Full model: 
 
 ```{r}
 # Full model
-check_roi_site_fx(HC_split, roi_small) %>% pander()
+check_roi_site_fx(HC_GAM, roi_small) %>% pander() 
 ```
 
 Sex not considered:
 
 ```{r}
 # Without considering sex
-check_roi_site_fx(HC_split, roi_small, mod_sex = FALSE) %>% pander()
+check_roi_site_fx(HC_GAM, roi_small, mod_sex = FALSE) %>% pander()
 ```
 
-## Site effects: HC [no split]
+## Site effects: HC [Linear]
 
 Number of ROIs showing site effects:
 
 Full model: 
 ```{r}
 # Full model
-check_roi_site_fx(HC_whole, roi_small) %>% pander()
+check_roi_site_fx(HC_Lin, roi_small) %>% pander()
 ```
 
 Sex not considered:
 ```{r}
 # Without considering sex
-check_roi_site_fx(HC_whole, roi_small, mod_sex = FALSE) %>% pander()
+check_roi_site_fx(HC_Lin, roi_small, mod_sex = FALSE) %>% pander()
 ```
 
-## Site effects by sex: HC [split M/F]
+## Site effects by sex: HC [GAM]
 
 Females:
 
 ```{r}
-filter(HC_whole, sex == "FEMALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+filter(HC_Lin, sex == "FEMALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
 
 Males:
 
 ```{r}
-filter(HC_whole, sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+filter(HC_Lin, sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
 
-## Site effects by sex: HC [no split]
+## Site effects by sex: HC [Linear]
 
 Females:
 
 ```{r}
-filter(HC_whole, sex == "FEMALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+filter(HC_Lin, sex == "FEMALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
 
 Males:
 
 ```{r}
-filter(HC_whole, sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+filter(HC_Lin, sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
 
 ## Conclusions

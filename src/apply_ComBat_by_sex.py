@@ -9,7 +9,7 @@ PROJECT_ROOT = "/Users/vgonzenb/PennSIVE/MSKIDS/"
 DATA_DIR = os.path.join("data", "deriv")
 MODELS_DIR = os.path.join("results", "models")
 
-def apply_harmonization_by_sex(data_file = "MS_data.csv"):
+def apply_harmonization_by_sex(data_file = "MS_data.csv", mod = "GAM"):
      # Load MS data and split by sex
     data = pd.read_csv(os.path.join(PROJECT_ROOT + DATA_DIR, data_file))
 
@@ -37,10 +37,19 @@ def apply_harmonization_by_sex(data_file = "MS_data.csv"):
     icv_F = np.array(data_F.iloc[:, 5])
 
     # Load ICV model for males and females
-    with open(os.path.join(PROJECT_ROOT + MODELS_DIR, 'ComBat-GAM_ICV_from-HC_data_MALE_eb-True.pickle'), 'rb') as f:
-        model_icv_M = pickle.load(f)
-    with open(os.path.join(PROJECT_ROOT + MODELS_DIR, 'ComBat-GAM_ICV_from-HC_data_FEMALE_eb-True.pickle'), 'rb') as f:
-        model_icv_F = pickle.load(f)
+    if mod == "GAM":
+        with open(os.path.join(PROJECT_ROOT + MODELS_DIR, 'ComBat-GAM_ICV_from-HC_data_MALE_eb-True.pickle'), 'rb') as f:
+            model_icv_M = pickle.load(f)
+        with open(os.path.join(PROJECT_ROOT + MODELS_DIR, 'ComBat-GAM_ICV_from-HC_data_FEMALE_eb-True.pickle'), 'rb') as f:
+            model_icv_F = pickle.load(f)
+    elif mod == "Linear":
+        covars_M["AGE_SQUARED"] = (covars_M.AGE - covars_M.AGE.mean()) ** 2 # center before squaring (second moment)
+        covars_F["AGE_SQUARED"] = (covars_F.AGE - covars_F.AGE.mean()) ** 2
+
+        with open(os.path.join(PROJECT_ROOT + MODELS_DIR, 'ComBat-Linear_ICV_from-HC_data_MALE_eb-True.pickle'), 'rb') as f:
+            model_icv_M = pickle.load(f)
+        with open(os.path.join(PROJECT_ROOT + MODELS_DIR, 'ComBat-Linear_ICV_from-HC_data_FEMALE_eb-True.pickle'), 'rb') as f:
+            model_icv_F = pickle.load(f)
 
     # Apply harmonization model Step 1
     icv_M_adj = harmonizationApply(icv_M, covars_M, model_icv_M)
@@ -54,10 +63,16 @@ def apply_harmonization_by_sex(data_file = "MS_data.csv"):
     rois_F = np.array(data_F.iloc[:, -145:])
 
     # Load ROI model for males and females
-    with open(os.path.join(PROJECT_ROOT + MODELS_DIR, 'ComBat-GAM_ROIs_from-HC_data_MALE_eb-True.pickle'), 'rb') as f:
-        model_rois_M = pickle.load(f)
-    with open(os.path.join(PROJECT_ROOT + MODELS_DIR, 'ComBat-GAM_ROIs_from-HC_data_FEMALE_eb-True.pickle'), 'rb') as f:
-        model_rois_F = pickle.load(f)
+    if mod == "GAM":
+        with open(os.path.join(PROJECT_ROOT + MODELS_DIR, 'ComBat-GAM_ROIs_from-HC_data_MALE_eb-True.pickle'), 'rb') as f:
+            model_rois_M = pickle.load(f)
+        with open(os.path.join(PROJECT_ROOT + MODELS_DIR, 'ComBat-GAM_ROIs_from-HC_data_FEMALE_eb-True.pickle'), 'rb') as f:
+            model_rois_F = pickle.load(f)
+    if mod == "Linear":
+        with open(os.path.join(PROJECT_ROOT + MODELS_DIR, 'ComBat-Linear_ROIs_from-HC_data_MALE_eb-True.pickle'), 'rb') as f:
+            model_rois_M = pickle.load(f)
+        with open(os.path.join(PROJECT_ROOT + MODELS_DIR, 'ComBat-Linear_ROIs_from-HC_data_FEMALE_eb-True.pickle'), 'rb') as f:
+            model_rois_F = pickle.load(f)
 
     # run  harmonization Step 2
     rois_M_adj = harmonizationApply(rois_M, covars_M, model_rois_M) 
@@ -93,6 +108,6 @@ def apply_harmonization_by_sex(data_file = "MS_data.csv"):
     data_adj = data_adj.drop(index = [data_M_adj.index[-1], data_F_adj.index[-1]])
     
     # save adjusted DataFrame as .csv
-    data_adj.to_csv(os.path.join(PROJECT_ROOT + DATA_DIR, 'MS_data_adj-ComBat-GAM_from-HC_split-MF_eb-True.csv'), index=False)
+    data_adj.to_csv(os.path.join(PROJECT_ROOT + DATA_DIR, f'{data_file[:-4]}_adj-ComBat-{mod}_from-HC_split-MF_eb-True.csv'), index=False)
 
-apply_harmonization_by_sex()
+apply_harmonization_by_sex(mod="Linear")
