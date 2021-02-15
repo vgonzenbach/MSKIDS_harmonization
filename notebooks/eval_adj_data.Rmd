@@ -1,8 +1,10 @@
 ---
-title: "EDA: MS ComBat GAM vs Linear"
+title: 'EDA: MS ComBat GAM vs Linear'
 author: "Virgilio Gonzenbach"
 date: "2/13/2021"
-output: beamer_presentation
+output:
+  beamer_presentation: default
+  ioslides_presentation: default
 ---
 
 ```{r setup, include=FALSE}
@@ -27,10 +29,10 @@ library(ggpubr)
 library(reshape2)
 
 # Load data
-HC_GAM = read.csv('data/deriv/HC_data_adj_ComBat-GAM_split-MF_eb-True.csv', stringsAsFactors = TRUE)
-HC_Lin = read.csv('data/deriv/HC_data_adj_ComBat-Linear_split-MF_eb-True.csv', stringsAsFactors = TRUE)
-MS_GAM = read.csv('data/deriv/MS_data_adj-ComBat-GAM_from-HC_split-MF_eb-True.csv', stringsAsFactors = TRUE)
-MS_Lin = read.csv('data/deriv/MS_data_adj-ComBat-Linear_from-HC_split-MF_eb-True.csv', stringsAsFactors = TRUE)
+HC_GAM = read.csv('data/deriv/HC_adj_ComBat-GAM_from-HC+MS_split-MF_eb-True.csv', stringsAsFactors = TRUE)
+HC_Lin = read.csv('data/deriv/HC_adj_ComBat-Linear_from-HC+MS_split-MF_eb-True.csv', stringsAsFactors = TRUE)
+MS_GAM = read.csv('data/deriv/MS_adj_ComBat-GAM_from-HC+MS_split-MF_eb-True.csv', stringsAsFactors = TRUE)
+MS_Lin = read.csv('data/deriv/MS_adj_ComBat-Linear_from-HC+MS_split-MF_eb-True.csv', stringsAsFactors = TRUE)
 
 # Filter out PNC
 HC_GAM = filter(HC_GAM, site != "PNC")
@@ -43,9 +45,9 @@ dict = read_xlsx("data/MUSE_ROI_Dict.xlsx", 1)
 dict = dict[dict$ROI_INDEX %in% 2:300, ] # Shorten dictionary
 
 # Rename ICV for readibility
-for(i in 1:length(list_df)){
-   colnames(list_df[[i]])[6] = "ICV"
-} 
+#for(i in 1:length(list_df)){
+#   colnames(list_df[[i]])[6] = "ICV"
+#} 
 
 # Aggregate ROIs
 prep_rois = function(df){
@@ -118,12 +120,12 @@ dim(MS_Lin)
 
 MS (count by site)
 ```{r}
-MS_Lin %>% group_by(site) %>% count() %>% pander()
+MS_Lin %>% group_by(site) %>% count() %>% kable()
 ```
 
 MS (count by sex)
 ```{r}
-MS_Lin %>% group_by(sex) %>% count(site) %>% pander()
+MS_Lin %>% group_by(sex) %>% count(site) %>% kable()
 ```
 
 Totals: Females = `r sum(MS_Lin$sex == "FEMALE")`; Males = `r sum(MS_Lin$sex == "MALE")`
@@ -183,110 +185,182 @@ HC_GAM %>% ggplot(aes(x=site, col=site, y=age)) + geom_boxplot() + facet_wrap(~s
 ## Harmonization Approach
 
 Adjusted data are shown for the following approach:  
-* Split the HC data into males and females  
-* Run ComBat (GAM or Linear) on both datasets.  
-* Apply resulting models to MS data in males and females respectively.  
 
-## Checking site effects
+- Join HC and MS data into one dataset
+- Split this dataset into males and females  
+- Run ComBat (GAM and Linear) on in parallel on males and females.
 
-Site effects were tested with different models and data splits.
+Models used in harmonization
 
-For full datasets, either sex and interactions terms (x ~ sex + age + age2 + age *x* sex + age2 *x* sex) were included or only age terms (x ~ age + age2).
-
-For datasets split by sex, only age terms were included.
-
-## Site effects: MS [GAM]
+- GAM: s(age) + MS
+- Linear: age + age^2 + MS
 
 ```{r}
-check_roi_site_fx = function(df, roi_names, mod_sex = TRUE, mod_interaction = TRUE){
+check_roi_site_fx = function(df, roi_names, mod_sex = FALSE, mod_MS = TRUE, mod_interaction = FALSE, print_Ps = FALSE){
    
-   # Decide formula 
+   base_rh_formula = "~ age + age2"
+   
    if(mod_sex){
       if(mod_interaction){
-         extract_p = function(x) anova(lm(x ~ sex + age + age2 + age*sex + age2*sex, data = df), 
-                                       lm(x ~ sex + age + age2 + age*sex + age2*sex + site, data = df)
-                                       )$`Pr(>F)`[2]
-      } else {
-         extract_p = function(x) anova(lm(x ~ sex + age + age2, data = df), 
-                                       lm(x ~ sex + age + age2 + site, data = df)
-                                       )$`Pr(>F)`[2]
+         sex_terms = " + sex + sex*age + sex*age2"
+      }else{
+         sex_terms = " + sex"
       }
-      
    }else{
-      mod_interaction = FALSE # by necessity
-      extract_p = function(x) anova(lm(x ~ age + age2, data = df), 
-                                    lm(x ~ age + age2 + site, data = df) # x ~ sex + age + age*sex + age2 + age2*sex + site
-                                 )$`Pr(>F)`[2] 
+      sex_terms = ""
    }
    
-   Ps = df %>% select(all_of(roi_names)) %>% sapply(extract_p)
+   if(mod_MS){
+      if(mod_interaction){
+         ms_terms = " + MS + MS*age + MS*age2"
+      }else{
+         ms_terms = " + MS"
+      }
+         
+   }else{
+      ms_terms = ""
+   }
+   
+   # Decide formula 
+   rh_formula = paste0(base_rh_formula, sex_terms, ms_terms)
+   print(rh_formula)
+   extract_p = function(x) anova(lm(as.formula(paste0(x, rh_formula)), data = df), 
+                                 lm(as.formula(paste0(x, rh_formula, "+ site")), data = df)
+                                       )$`Pr(>F)`[2]
+      
+   
+   Ps = roi_names %>% sapply(extract_p)
    p_count = c(sum(p.adjust(Ps, method = 'fdr') < 0.05),
                sum(p.adjust(Ps, method = 'bonferroni') < 0.05),
                sum(Ps < 0.05)
                )
-   
+   if(print_Ps) print(Ps)
    names(p_count) = c("FDR", "Bonferroni", "Uncorrected P")
    invisible(p_count)
 }
 ```
 
+## Site effects: MS + HC [GAM]
 
 Number of ROIs showing site effects:
 
 Full covariate model: 
+
 ```{r}
 # Full model
-check_roi_site_fx(MS_GAM, roi_small) %>% pander()
+rbind(HC_GAM, MS_GAM) %>% check_roi_site_fx(roi_small, mod_sex = TRUE, mod_MS = TRUE) %>% pander()
+```
+
+Ignore sex:
+```{r}
+# Full model
+rbind(HC_GAM, MS_GAM) %>% check_roi_site_fx(roi_small, mod_sex = FALSE, mod_MS = TRUE) %>% pander()
+```
+
+## Site effects by sex: MS + HC [GAM]
+
+Females: 
+
+```{r}
+rbind(HC_GAM, MS_GAM) %>%  filter(sex == "FEMALE") %>% check_roi_site_fx(roi_small) %>% pander()
+```
+
+Males:
+
+```{r}
+rbind(HC_GAM, MS_GAM) %>% filter(sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_MS = TRUE) %>% pander()
+```
+
+## Site effects: MS + HC [Linear]
+
+Full covariate model: 
+
+```{r}
+# Full model
+rbind(MS_Lin, HC_Lin) %>% check_roi_site_fx(roi_small, mod_sex = TRUE) %>% pander()
+```
+
+
+Sex not considered:
+```{r}
+# Without considering sex
+rbind(MS_Lin, HC_Lin) %>% check_roi_site_fx(roi_small) %>% pander()
+```
+
+## Site effects by sex: MS + HC [Linear]
+
+Females: 
+
+```{r}
+rbind(MS_Lin, HC_Lin) %>% filter(sex == "FEMALE") %>% check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+```
+
+Males:
+
+```{r}
+rbind(MS_Lin, HC_Lin) %>% filter(sex == "MALE") %>% check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+```
+
+
+
+## Site effects: MS [GAM]
+
+Full model: 
+
+```{r}
+# Full model
+MS_GAM %>% check_roi_site_fx(roi_small, mod_sex = TRUE) %>% pander() 
+```
+
+Ignore sex:
+
+```{r}
+# Without considering sex
+MS_GAM %>% check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+```
+
+## Site effects: MS [Linear]
+
+Number of ROIs showing site effects:
+
+Full model: 
+```{r}
+# Full model
+MS_Lin %>% check_roi_site_fx(roi_small, mod_sex = TRUE) %>% pander()
 ```
 
 Sex not considered:
 ```{r}
 # Without considering sex
-check_roi_site_fx(MS_GAM, roi_small, mod_sex = FALSE) %>% pander()
+MS_Lin %>% check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
 
 ## Site effects by sex: MS [GAM]
 
-Females: 
+Females:
 
 ```{r}
-filter(MS_GAM, sex == "FEMALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+MS_GAM %>% filter(sex == "FEMALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
 
 Males:
 
 ```{r}
-filter(MS_GAM, sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
-```
-
-
-## Site effects: MS [Linear]
-
-Full covariate model: 
-```{r}
-# Full model
-check_roi_site_fx(MS_Lin, roi_small) %>% pander()
-```
-
-
-Sex not considered:
-```{r}
-# Without considering sex
-check_roi_site_fx(MS_Lin, roi_small, mod_sex = FALSE) %>% pander()
+MS_GAM %>% filter(sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
 
 ## Site effects by sex: MS [Linear]
 
-Females: 
+Females:
 
 ```{r}
-filter(MS_Lin, sex == "FEMALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+MS_Lin %>% filter(sex == "FEMALE") %>% check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
 
 Males:
 
 ```{r}
-filter(MS_Lin, sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+MS_Lin %>% filter(sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
 
 ## Site effects: HC [GAM]
@@ -295,15 +369,29 @@ Full model:
 
 ```{r}
 # Full model
-check_roi_site_fx(HC_GAM, roi_small) %>% pander() 
+HC_GAM %>% check_roi_site_fx(roi_small, mod_sex = TRUE) %>% pander() 
 ```
 
 Sex not considered:
 
 ```{r}
 # Without considering sex
-check_roi_site_fx(HC_GAM, roi_small, mod_sex = FALSE) %>% pander()
+HC_GAM %>% check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
+## Site effects by sex: HC [GAM]
+
+Females:
+
+```{r}
+HC_GAM %>% filter(sex == "FEMALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+```
+
+Males:
+
+```{r}
+HC_GAM %>% filter(sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+```
+
 
 ## Site effects: HC [Linear]
 
@@ -312,27 +400,13 @@ Number of ROIs showing site effects:
 Full model: 
 ```{r}
 # Full model
-check_roi_site_fx(HC_Lin, roi_small) %>% pander()
+HC_Lin %>% check_roi_site_fx(roi_small, mod_sex = TRUE) %>% pander()
 ```
 
 Sex not considered:
 ```{r}
 # Without considering sex
-check_roi_site_fx(HC_Lin, roi_small, mod_sex = FALSE) %>% pander()
-```
-
-## Site effects by sex: HC [GAM]
-
-Females:
-
-```{r}
-filter(HC_Lin, sex == "FEMALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
-```
-
-Males:
-
-```{r}
-filter(HC_Lin, sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+HC_Lin %>% check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
 
 ## Site effects by sex: HC [Linear]
@@ -340,13 +414,13 @@ filter(HC_Lin, sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE)
 Females:
 
 ```{r}
-filter(HC_Lin, sex == "FEMALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+HC_Lin %>% filter(sex == "FEMALE") %>% check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
 
 Males:
 
 ```{r}
-filter(HC_Lin, sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+HC_Lin %>% filter( sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
 
 ## Conclusions
