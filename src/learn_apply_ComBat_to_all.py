@@ -24,9 +24,11 @@ def harmonize_all_data_by_sex(data_file1 = 'HC_data.csv', data_file2= "MS_data.c
     # Prepare covariates
     covars_M = data_M.iloc[:, 2:5] # select site and age
     covars_M.columns = ['SITE', 'AGE', 'MS']
+    covars_M["AGE_BY_MS"] = covars_M['AGE'] * covars_M['MS']
     
     covars_F = data_F.iloc[:, 2:5] # select site and age
     covars_F.columns = ['SITE', 'AGE', 'MS']
+    covars_F["AGE_BY_MS"] = covars_F['AGE'] * covars_F['MS']
 
     # Prepare data for harmonization Step 1
     icv_M = np.array(data_M.iloc[:, 6])
@@ -40,6 +42,9 @@ def harmonize_all_data_by_sex(data_file1 = 'HC_data.csv', data_file2= "MS_data.c
     elif mod == "Linear":
         covars_M["AGE_SQUARED"] = (covars_M.AGE - covars_M.AGE.mean()) ** 2 # center before squaring (second moment)
         covars_F["AGE_SQUARED"] = (covars_F.AGE - covars_F.AGE.mean()) ** 2
+
+        covars_M["AGE_SQ_BY_MS"] = covars_M["AGE_SQUARED"] * covars_M["MS"]
+        covars_F["AGE_SQ_BY_MS"] = covars_F["AGE_SQUARED"] * covars_F["MS"]
 
         mod_icv_M, icv_M_adj = harmonizationLearn(np.stack((icv_M, icv_M)).T, covars_M, eb=False) # stack ICV to fit dimensions required by harmonizationLearn
         mod_icv_F, icv_F_adj = harmonizationLearn(np.stack((icv_F, icv_F)).T, covars_F, eb=False) 

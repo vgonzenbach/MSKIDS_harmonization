@@ -5,6 +5,7 @@ date: "2/13/2021"
 output:
   beamer_presentation: default
   ioslides_presentation: default
+  slidy_presentation: default
 ---
 
 ```{r setup, include=FALSE}
@@ -45,9 +46,10 @@ dict = read_xlsx("data/MUSE_ROI_Dict.xlsx", 1)
 dict = dict[dict$ROI_INDEX %in% 2:300, ] # Shorten dictionary
 
 # Rename ICV for readibility
-#for(i in 1:length(list_df)){
-#   colnames(list_df[[i]])[6] = "ICV"
-#} 
+for(i in 1:length(list_df)){
+   ICV_index = which(colnames(list_df[[i]]) == "X702")
+   colnames(list_df[[i]])[ICV_index] = "ICV"
+} 
 
 # Aggregate ROIs
 prep_rois = function(df){
@@ -192,13 +194,12 @@ Adjusted data are shown for the following approach:
 
 Models used in harmonization
 
-- GAM: s(age) + MS
-- Linear: age + age^2 + MS
+- GAM: s(age) + MS + MS*x*age
+- Linear: age + age^2 + MS + MS*x*age + MS*x*age2
 
 ```{r}
-check_roi_site_fx = function(df, roi_names, mod_sex = FALSE, mod_MS = TRUE, mod_interaction = FALSE, print_Ps = FALSE){
-   
-   base_rh_formula = "~ age + age2"
+check_roi_site_fx = function(df, roi_names, mod_sex = FALSE, mod_MS = FALSE, mod_interaction = TRUE, print_Ps = FALSE){
+   base_rh_formula = "~ ICV + age + age2"
    
    if(mod_sex){
       if(mod_interaction){
@@ -262,7 +263,7 @@ rbind(HC_GAM, MS_GAM) %>% check_roi_site_fx(roi_small, mod_sex = FALSE, mod_MS =
 Females: 
 
 ```{r}
-rbind(HC_GAM, MS_GAM) %>%  filter(sex == "FEMALE") %>% check_roi_site_fx(roi_small) %>% pander()
+rbind(HC_GAM, MS_GAM) %>%  filter(sex == "FEMALE") %>% check_roi_site_fx(roi_small, mod_MS = TRUE) %>% pander()
 ```
 
 Males:
@@ -277,14 +278,14 @@ Full covariate model:
 
 ```{r}
 # Full model
-rbind(MS_Lin, HC_Lin) %>% check_roi_site_fx(roi_small, mod_sex = TRUE) %>% pander()
+rbind(MS_Lin, HC_Lin) %>% check_roi_site_fx(roi_small, mod_MS = TRUE) %>% pander()
 ```
 
 
 Sex not considered:
 ```{r}
 # Without considering sex
-rbind(MS_Lin, HC_Lin) %>% check_roi_site_fx(roi_small) %>% pander()
+rbind(MS_Lin, HC_Lin) %>% check_roi_site_fx(roi_small, mod_MS = TRUE) %>% pander()
 ```
 
 ## Site effects by sex: MS + HC [Linear]
@@ -292,13 +293,13 @@ rbind(MS_Lin, HC_Lin) %>% check_roi_site_fx(roi_small) %>% pander()
 Females: 
 
 ```{r}
-rbind(MS_Lin, HC_Lin) %>% filter(sex == "FEMALE") %>% check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+rbind(MS_Lin, HC_Lin) %>% filter(sex == "FEMALE") %>% check_roi_site_fx(roi_small, mod_sex = FALSE, mod_MS = TRUE) %>% pander()
 ```
 
 Males:
 
 ```{r}
-rbind(MS_Lin, HC_Lin) %>% filter(sex == "MALE") %>% check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+rbind(MS_Lin, HC_Lin) %>% filter(sex == "MALE") %>% check_roi_site_fx(roi_small, mod_sex = FALSE, mod_MS = TRUE) %>% pander()
 ```
 
 
@@ -425,10 +426,7 @@ HC_Lin %>% filter( sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FA
 
 ## Conclusions
 
-Harmonization seems to be effective for Females in HC and MS.
-
-With the current approach, MS Males are not harmonized correctly.
-
+Harmonization is effective.
 
 
 
