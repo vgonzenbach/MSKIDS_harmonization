@@ -32,7 +32,8 @@ colnames(MS_data)[1:5] = c("ID", "scanner", "site", "age", "sex")
 # Check consistency between site and scanner
 table(MS_data$scanner, MS_data$site)
 
-# Delete n=18 HSC-SIEMENSTIMTRIO
-MS_data = MS_data[!(MS_data$site == "HSC" & MS_data$scanner == "SIEMENSTIMTRIO"),]
+# Edit site to reflect scanner for HSC data
+MS_data$site[MS_data$site == "HSC" & MS_data$scanner == "SIEMENSPRISMAFIT"] = "HSC-SIEMENSPRISMAFIT"
+MS_data$site[MS_data$site == "HSC" & MS_data$scanner == "SIEMENSTIMTRIO"] = "HSC-SIEMENSTIMTRIO"
 
 write.csv(MS_data, 'data/deriv/MS_data.csv', row.names = FALSE)

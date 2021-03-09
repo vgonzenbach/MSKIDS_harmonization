@@ -106,8 +106,9 @@ colnames(MSK_HC)[1:4] = c("ID","scanner","site", "age")
 data = rbind(MSK_HC, PNC)
 data$sex = recode(data$sex, `1` = "MALE", `2` = "FEMALE")
 
-# Exclude n=7 batch
-data = data[!(data$site == "HSC" & data$scanner == "SIEMENSTIMTRIO"),]
+# Edit site to reflect scanner for HSC data
+data$site[data$site == "HSC" & data$scanner == "SIEMENSPRISMAFIT"] = "HSC-SIEMENSPRISMAFIT"
+data$site[data$site == "HSC" & data$scanner == "SIEMENSTIMTRIO"] = "HSC-SIEMENSTIMTRIO"
 
 # Exclude extra ROIs
 data = data[,c(1:6, 120:ncol(data))]
