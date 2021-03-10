@@ -424,9 +424,76 @@ Males:
 HC_Lin %>% filter( sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
 
-## Conclusions
+## Harmonization Conclusions
 
 Harmonization is effective.
 
+## Signal check
 
+```{r}
+library(tibble)
 
+# prepare harmonized data
+harmonized_df = rbind(HC_GAM, MS_GAM)
+
+# load raw data
+HC_raw = read.csv("data/deriv/HC_data.csv")
+HC_raw = HC_raw %>% filter(site != "PNC")
+
+MS_raw = read.csv("data/deriv/MS_data.csv")
+
+raw_df = rbind(HC_raw, MS_raw) %>% mutate(age2 = (age - mean(age))^2, .after = age)
+MS = c(rep(0, nrow(HC_raw)), rep(1, nrow(MS_raw)))
+raw_df = add_column(raw_df, MS, .before = "sex")
+
+colnames(raw_df)[8] = "ICV"
+
+raw_df = prep_rois(raw_df)
+
+# run model
+run_full_model = function(data, roi_names, mod_site = FALSE){
+   rh_formula = ifelse(mod_site, 
+                       "~ ICV + age + age2 + sex + sex*age + sex*age2 + MS + MS*age + MS*age2 + site",
+                       "~ ICV + age + age2 + sex + sex*age + sex*age2 + MS + MS*age + MS*age2")
+   
+   formulas = sapply(roi_names, function(x) as.formula(paste0(x, rh_formula)))
+   Ps = formulas %>% sapply(function(x) coef(summary(lm(x, data=raw_df)))[c(6, 9, 10),4])
+   
+   p_count = list()
+   for(i in 1:nrow(Ps)){
+      p_count[[i]] = c(sum(p.adjust(Ps[i,], method = 'fdr') < 0.05),
+                     sum(p.adjust(Ps[i,], method = 'bonferroni') < 0.05),
+                     sum(Ps[i,] < 0.05))
+      names(p_count[[i]]) = c("FDR", "Bonferroni", "Uncorrected Ps")
+   }
+   names(p_count) = rownames(Ps)
+   return(p_count)
+}
+```
+
+Full model = ROI ~ ICV + age + age2 + sex + sex*age + sex*age2 + MS + MS*age + MS*age2
+
+## Raw data
+```{r}
+run_full_model(raw_df, roi_small) %>% pander()
+```
+
+## Harmonized data (GAM)
+```{r}
+run_full_model(harmonized_df, roi_small) %>% pander()
+```
+
+## Raw data (w/ site)
+
+```{r}
+run_full_model(raw_df, roi_small, mod_site = TRUE) %>% pander()
+```
+
+## Harmonized data (w/ site)
+```{r}
+run_full_model(harmonized_df, roi_small, mod_site = TRUE) %>% pander()
+```
+
+## Signal check conclusion
+
+Harmonization does not change the number of significant p-values when testing the full model. Success!
