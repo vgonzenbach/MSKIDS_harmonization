@@ -1,7 +1,7 @@
 ---
 title: "MSKIDS Scanner Harmonization"
-author: "Virgilio Gonzenbach"
-date: "3/22/2021"
+author: "Virgilio Gonzenbach, Kelly Clark, Taki Shinohara"
+date: "04/09/2021"
 output: 
   beamer_presentation:
     theme: "AnnArbor"
@@ -12,8 +12,8 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE,
                       cache = TRUE, 
-                      cache.path = 'cache/GAMs/', 
-                      fig.path = "figures/GAMs/")
+                      cache.path = 'cache/final_slides/', 
+                      fig.path = "figures/final_slides/")
 knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 ```
 
@@ -29,11 +29,14 @@ library(pander)
 library(ggpubr)
 library(reshape2)
 library(readr)
+library(lmtest)
 
 df = readRDS("data/deriv/HC_data.rds")
 dict = read_xlsx("data/MUSE_ROI_Dict.xlsx", 1)
 dict = dict[dict$ROI_INDEX %in% 2:300, ]
-
+get_desc = function(roi_index){
+  dict$ROI_NAME[match(parse_number(roi_index), dict$ROI_INDEX)]
+}
 # Load data
 HC_raw = read.csv('data/deriv/HC_data.csv')
 HC_raw = HC_raw %>% mutate(MS = 0, .after = age)
@@ -94,15 +97,13 @@ roi_big = colnames(list_df[[1]])[153:160]
 
 ## Overview
 
-- MSKIDS data summary
-- PNC analysis: ROIs [Males vs Females], GAMs
-- Harmonization of scanner effects with ComBat-GAM
+- MSKIDS data summary.
+- Finding from PNC analysis guiding harmonization approach.
+- Harmonization of scanner effects with ComBat-GAM and post-harmonization evaluation.
 
 # MSKIDS data summary
 
 ## MSKIDS: All participants
-
-Participants: `r nrow(rbind(HC_raw, MS_raw))`
 
 Per scanner:
 ```{r}
@@ -114,11 +115,9 @@ Per sex and site:
 rbind(HC_raw, MS_raw) %>% group_by(sex) %>% count(site) %>% kable()
 ```
 
-Totals: Females = `r sum(rbind(HC_raw, MS_raw)$sex == "FEMALE")`; Males = `r sum(rbind(HC_raw, MS_raw)$sex == "MALE")`
+Totals: Females = `r sum(rbind(HC_raw, MS_raw)$sex == "FEMALE")`; Males = `r sum(rbind(HC_raw, MS_raw)$sex == "MALE")`; All = `r nrow(rbind(HC_raw, MS_raw))`
 
 ## MSKIDS: HC only
-
-Participants: `r nrow(HC_raw)`
 
 Per site:
 ```{r}
@@ -130,11 +129,9 @@ Per sex and site:
 HC_raw %>% group_by(sex) %>% count(site) %>% kable()
 ```
 
-Totals: Females = `r sum(HC_raw$sex == "FEMALE")`; Males = `r sum(HC_raw$sex == "MALE")`
+Totals: Females = `r sum(HC_raw$sex == "FEMALE")`; Males = `r sum(HC_raw$sex == "MALE")`: All = `r nrow(HC_raw)`
 
 ## MSKIDS: MS only
-
-Participants: `r nrow(MS_raw)`
 
 Per site:
 ```{r}
@@ -146,10 +143,10 @@ Per sex and site:
 MS_raw %>% group_by(sex) %>% count(site) %>% kable()
 ```
 
-Totals: Females = `r sum(MS_raw$sex == "FEMALE")`; Males = `r sum(MS_raw$sex == "MALE")`
+Totals: Females = `r sum(MS_raw$sex == "FEMALE")`; Males = `r sum(MS_raw$sex == "MALE")`; All = `r nrow(MS_raw)`
 
 ## MSKIDS: Age [All participants]
-```{r}
+```{r, out.height="85%"}
 rbind(HC_raw, MS_raw) %>% ggplot(aes(x=site, col=site, y=age)) + geom_boxplot() + facet_wrap(~sex) + xlab("Site") + ylab("Age") + ggtitle("Age of MSKIDS participants") + 
   theme(axis.text.x = element_blank(),
         axis.ticks.x=element_blank())
@@ -157,7 +154,7 @@ rbind(HC_raw, MS_raw) %>% ggplot(aes(x=site, col=site, y=age)) + geom_boxplot() 
 
 ## MSKIDS: Age [HC only]
 
-```{r}
+```{r, out.height="85%"}
 HC_raw %>% ggplot(aes(x=site, col=site, y=age)) + geom_boxplot() + facet_wrap(~sex) + xlab("Site") + ylab("Age") + ggtitle("Age of MSKIDS Healthy Controls") + 
   theme(axis.text.x = element_blank(),
         axis.ticks.x=element_blank())
@@ -165,7 +162,7 @@ HC_raw %>% ggplot(aes(x=site, col=site, y=age)) + geom_boxplot() + facet_wrap(~s
 
 ## MSKIDS: Age [MS only]
 
-```{r}
+```{r, out.height="85%"}
 MS_raw %>% ggplot(aes(x=site, col=site, y=age)) + geom_boxplot() + facet_wrap(~sex) + xlab("Site") + ylab("Age") + ggtitle("Age of MSKIDS MS Patients") + 
   theme(axis.text.x = element_blank(),
         axis.ticks.x=element_blank())
@@ -176,8 +173,9 @@ MS_raw %>% ggplot(aes(x=site, col=site, y=age)) + geom_boxplot() + facet_wrap(~s
 ## Overview
 
 Objective: To inform harmonization approach by  
-- Determining Age-ROI, ICV-Age, ICV-ROI relationships in Males and Females  
-- Ascertaining non-linear age trends in select ROIs
+
+- Determining Age-ROI relationships in Males and Females  
+- Ascertaining non-linear age trends in select ROIs  
 
 ## Age by Sex
 
@@ -227,8 +225,7 @@ stargazer(lm_M, lm_F,
           column.labels = c("Males", "Females"),
           dep.var.labels = "Intracranial Volume ",
           covariate.labels = c("Age"),
-          keep.stat = c("rsq"),
-          notes = "Stargazer", 
+          keep.stat = c("rsq"), 
           header=FALSE,
           column.sep.width = "0pt",
           single.row = TRUE,
@@ -251,7 +248,6 @@ stargazer(lm_M, lm_F,
           dep.var.labels = "White Matter Volume ",
           covariate.labels = c("Age"),
           keep.stat = c("rsq"),
-          notes = "Stargazer", 
           header=FALSE,
           column.sep.width = "0pt",
           single.row = TRUE,
@@ -273,7 +269,6 @@ stargazer(lm_M, lm_F,
           dep.var.labels = "Gray Matter Volume ",
           covariate.labels = c("Age"),
           keep.stat = c("rsq"),
-          notes = "Stargazer", 
           header=FALSE,
           column.sep.width = "0pt",
           single.row = TRUE,
@@ -295,7 +290,6 @@ stargazer(lm_M, lm_F,
           dep.var.labels = "Cerebrospinal Fluid Volume ",
           covariate.labels = c("Age"),
           keep.stat = c("rsq"),
-          notes = "Stargazer", 
           header=FALSE,
           column.sep.width = "0pt",
           single.row = TRUE,
@@ -304,13 +298,36 @@ stargazer(lm_M, lm_F,
           )
 ```
 
+## Analysis of non-linear age trends: Generalized Additive Models (1)
+
+Generalized Additive Models (GAMs) allow for modeling non-linear relationships through the use of smooth functions composed of adjustable basis functions.
+
+```{r, out.width="75%", out.height="75%", fig.align = 'center', echo=FALSE}
+knitr::include_graphics('/Users/vgonzenb/PennSIVE/MSKIDS/basis-function-1.png')
+```
+
+## Analysis of non-linear age trends: Generalized Additive Models (2)
+
+Generalized Additive Models (GAMs) allow for modeling non-linear relationships through the use of smooth functions composed of adjustable basis functions.
+
+```{r, out.width="75%", out.height="75%", fig.align = 'center', echo=FALSE}
+knitr::include_graphics('/Users/vgonzenb/PennSIVE/MSKIDS/basis-function-2.png')
+```
+
+## Analysis of non-linear age trends: Generalized Additive Models (3)
+
+Generalized Additive Models (GAMs) allow for modeling non-linear relationships through the use of smooth functions composed of adjustable basis functions.
+
+```{r, out.width="75%", out.height="75%", fig.align = 'center', echo=FALSE}
+knitr::include_graphics('/Users/vgonzenb/PennSIVE/MSKIDS/basis-function-3.png')
+```
+
 ## Comparison of GAMs vs Linear models across all 145 ROIs
 
 - Model 1: ROI = sex + age + age*sex   
 - Model 2: ROI = sex + s(age, by = sex), where s() denotes the smooth function(s) fitted separately within each sex.
 
-
-## ROIs w/ non-linear age trends (FDR-adjusted): 
+## ROIs showing non-linear age effects (FDR-adjusted) 
 
 ```{r}
 ## ANOVA of all regions
@@ -331,12 +348,14 @@ p = c(sum(Ps[1,] < 0.05),
 names(p) = c("GAM != Linear (No adj.)", "GAM != Linear (Bonferroni)", "GAM != Linear (FDR)")
 
 sig_rois = names(which(p.adjust(Ps[1,], method = 'fdr') < 0.05))
-dict[dict$ROI_INDEX %in% readr::parse_number(sig_rois),1:4] %>% pander()
+frame = dict[dict$ROI_INDEX %in% readr::parse_number(sig_rois),1:4] 
+colnames(frame) = c("", "ROI Name", "Hemisphere", "Tissue")
+frame %>% pander()
 ```
 
 ## Pairwise Correlations
 
-```{r, warning=FALSE, message=FALSE}
+```{r, out.height = "90%", warning=FALSE, message=FALSE}
 sig_rois_paired = matrix(data = NA, nrow = nrow(PNC), ncol = length(sig_rois) %/% 2)
 
 for(i in 2:length(sig_rois)){
@@ -368,7 +387,7 @@ sig_rois_df$age = PNC$age # add age
 colnames(sig_rois_df) = gsub(" ", "\\.", colnames(sig_rois_df)) # replace spaces for dots in column names
 
 # Males
-gam_M = mgcv::gam(Brain.Stem ~ s(age,
+gam_M = mgcv::gam(Brain.Stem ~ PNC$ICV[PNC$sex == "MALE"] + s(age,
                                   k=3,
                                   bs = 'tp',
                                   fx=TRUE), 
@@ -377,7 +396,7 @@ gam_M = mgcv::gam(Brain.Stem ~ s(age,
                     method = 'REML')
 
 # Females
-gam_F = mgcv::gam(Brain.Stem ~ s(age,
+gam_F = mgcv::gam(Brain.Stem ~ PNC$ICV[PNC$sex == "FEMALE"] + s(age,
                                 k=3,
                                 bs = 'tp',
                                 fx=TRUE), 
@@ -390,41 +409,11 @@ plot(gam_F, residuals = TRUE, pch = 1, main = "Females", ylab = "Brain Stem", ce
 plot(gam_M, residuals = TRUE, pch = 1,  main = 'Males', cex = 0.75, ylab = "Brain Stem", shade = TRUE, seWithMean = TRUE, shift = coef(gam_F)[1])
 ```
 
-```{r}
-summ_M = summary(gam_M)
-summ_F = summary(gam_F)
-```
-
-- Males: $R^2 =$ `r round(summ_M$r.sq,3)`  
-- Females: $R^2 =$ `r round(summ_F$r.sq,3)` 
-
-## Brain Stem: Linear Models by Sex
-
-```{r, results='asis'}
-lm_M = lm(scale(Brain.Stem) ~ scale(age) + scale((age - mean(age))^2), data = filter(sig_rois_df, sex == "MALE"))
-lm_F = lm(scale(Brain.Stem) ~ scale(age) + scale((age - mean(age))^2) , data = filter(sig_rois_df, sex == "FEMALE"))
-
-# Show table (pretty)
-#suppressMessages(tab_model(lm_M, lm_F,p.style = "numeric"))
-stargazer(lm_M, lm_F, 
-          column.labels = c("Males", "Females"),
-          dep.var.labels = "Brain Stem Volume",
-          covariate.labels = c("Age", "Age (Squared)"),
-          keep.stat = c("rsq"),
-          notes = "Stargazer", 
-          header=FALSE,
-          column.sep.width = "0pt",
-          single.row = TRUE,
-          ci = TRUE,
-          star.cutoffs = c(.05, .01, .001)
-          )
-```
-
 ## Cerebellum WM: GAM plot
 
 ```{r}
 # Males
-gam_M = mgcv::gam(Cerebellum.WM ~ s(age,
+gam_M = mgcv::gam(Cerebellum.WM ~ PNC$ICV[PNC$sex == "MALE"] + s(age,
                                   k=3,
                                   bs = 'tp', 
                                   fx=TRUE), 
@@ -432,7 +421,7 @@ gam_M = mgcv::gam(Cerebellum.WM ~ s(age,
                     family = gaussian,
                     method = 'REML')
 # Females
-gam_F = mgcv::gam(Cerebellum.WM ~ s(age,
+gam_F = mgcv::gam(Cerebellum.WM ~ PNC$ICV[PNC$sex == "FEMALE"] + s(age,
                                 k=3,
                                 bs = 'tp',
                                 fx=TRUE), 
@@ -445,42 +434,12 @@ plot(gam_F, residuals = TRUE, pch = 1, ylab = "Cerebellum WM", main = "Females",
 plot(gam_M, residuals = TRUE, pch = 1, ylab = "Cerebellum WM", main = 'Males', cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_F)[1])
 ```
 
-## Cerebellum WM: Linear Models by Sex
-
-```{r, results='asis'}
-lm_M = lm(scale(Cerebellum.WM) ~ scale(age) + scale((age - mean(age))^2) , data = filter(sig_rois_df, sex == "MALE"))
-lm_F = lm(scale(Cerebellum.WM) ~ scale(age) + scale((age - mean(age))^2) , data = filter(sig_rois_df, sex == "FEMALE"))
-
-# Show table (pretty)
-stargazer(lm_M, lm_F, 
-          column.labels = c("Males", "Females"),
-          dep.var.labels = "Cerebellum WM ",
-          covariate.labels = c("Age", "Age (Squared)"),
-          keep.stat = c("rsq"),
-          notes = "Stargazer", 
-          header=FALSE,
-          column.sep.width = "0pt",
-          single.row = TRUE,
-          ci = TRUE,
-          star.cutoffs = c(.05, .01, .001)
-          )
-```
-
-```{r}
-summ_M = summary(gam_M)
-summ_F = summary(gam_F)
-```
-
-R-squared of GAMs:  
-- Males: $R^2 =$ `r round(summ_M$r.sq,3)`  
-- Females: $R^2 =$ `r round(summ_F$r.sq,3)` 
-
 
 ## Ventral Diencephalon: GAM Plot
 
 ```{r}
 # Males
-gam_M = mgcv::gam(Ventral.DC ~ s(age,
+gam_M = mgcv::gam(Ventral.DC ~ PNC$ICV[PNC$sex == "MALE"] + s(age,
                                   k=3,
                                   bs = 'tp', 
                                   fx=TRUE), 
@@ -488,7 +447,7 @@ gam_M = mgcv::gam(Ventral.DC ~ s(age,
                     family = gaussian,
                     method = 'REML')
 # Females
-gam_F = mgcv::gam(Ventral.DC ~ s(age,
+gam_F = mgcv::gam(Ventral.DC ~ PNC$ICV[PNC$sex == "FEMALE"] + s(age,
                                 k=3,
                                 bs = 'tp',
                                 fx=TRUE), 
@@ -501,40 +460,11 @@ plot(gam_F, residuals = TRUE, pch = 1, ylab = "Ventral DC", main = "Females", ce
 plot(gam_M, residuals = TRUE, pch = 1, ylab = "Ventral DC", main = 'Males', cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_F)[1])
 ```
 
-## Ventral DC: Linear Models by Sex
-
-```{r, results='asis'}
-lm_M = lm(scale(Ventral.DC) ~ scale(age) + scale((age - mean(age))^2) , data = filter(sig_rois_df, sex == "MALE"))
-lm_F = lm(scale(Ventral.DC) ~ scale(age) + scale((age - mean(age))^2) , data = filter(sig_rois_df, sex == "FEMALE"))
-
-# Show table (pretty)
-stargazer(lm_M, lm_F, 
-          column.labels = c("Males", "Females"),
-          dep.var.labels = "Ventral DC",
-          covariate.labels = c("Age", "Age (Squared)"),
-          keep.stat = c("rsq"),
-          notes = "Stargazer", 
-          header=FALSE,
-          column.sep.width = "0pt",
-          single.row = TRUE,
-          ci = TRUE,
-          star.cutoffs = c(.05, .01, .001)
-          )
-```
-
-```{r}
-summ_M = summary(gam_M)
-summ_F = summary(gam_F)
-```
-
-- Males: $R^2 =$ `r round(summ_M$r.sq,3)`  
-- Females: $R^2 =$ `r round(summ_F$r.sq,3)` 
-
 ## Fornix: GAM Plot
 
 ```{r}
 # Males
-gam_M = mgcv::gam(Fornix ~ s(age,
+gam_M = mgcv::gam(Fornix ~ PNC$ICV[PNC$sex == "MALE"] + s(age,
                                   k=3,
                                   bs = 'tp', 
                                   fx=TRUE), 
@@ -542,7 +472,7 @@ gam_M = mgcv::gam(Fornix ~ s(age,
                     family = gaussian,
                     method = 'REML')
 # Females
-gam_F = mgcv::gam(Fornix ~ s(age,
+gam_F = mgcv::gam(Fornix ~ PNC$ICV[PNC$sex == "FEMALE"] + s(age,
                                 k=3,
                                 bs = 'tp',
                                 fx=TRUE), 
@@ -555,40 +485,11 @@ plot(gam_F, residuals = TRUE, pch = 1, ylab = "Fornix", main = "Females", cex = 
 plot(gam_M, residuals = TRUE, pch = 1, ylab = "Fornix", main = 'Males', cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_F)[1])
 ```
 
-```{r}
-summ_M = summary(gam_M)
-summ_F = summary(gam_F)
-```
-
-- Males: $R^2 =$ `r round(summ_M$r.sq,3)`  
-- Females: $R^2 =$ `r round(summ_F$r.sq,3)` 
-
-## Fornix: Linear Models by Sex
-
-```{r, results='asis'}
-lm_M = lm(scale(Fornix) ~ scale(age) + scale((age - mean(age))^2) , data = filter(sig_rois_df, sex == "MALE"))
-lm_F = lm(scale(Fornix) ~ scale(age) + scale((age - mean(age))^2) , data = filter(sig_rois_df, sex == "FEMALE"))
-
-# Show table (pretty)
-stargazer(lm_M, lm_F, 
-          column.labels = c("Males", "Females"),
-          dep.var.labels = "Fornix",
-          covariate.labels = c("Age", "Age (Squared)"),
-          keep.stat = c("rsq"),
-          notes = "Stargazer", 
-          header=FALSE,
-          column.sep.width = "0pt",
-          single.row = TRUE,
-          ci = TRUE,
-          star.cutoffs = c(.05, .01, .001)
-          )
-```
-
 ## Anterior Limb of Internal Capsule (ALIC): GAM Plot
 
 ```{r}
 # Males
-gam_M = mgcv::gam(Ant.Limb.Int.Capsule ~ s(age,
+gam_M = mgcv::gam(Ant.Limb.Int.Capsule ~ PNC$ICV[PNC$sex == "MALE"] + s(age,
                                   k=3,
                                   bs = 'tp', 
                                   fx=TRUE), 
@@ -596,7 +497,7 @@ gam_M = mgcv::gam(Ant.Limb.Int.Capsule ~ s(age,
                     family = gaussian,
                     method = 'REML')
 # Females
-gam_F = mgcv::gam(Ant.Limb.Int.Capsule ~ s(age,
+gam_F = mgcv::gam(Ant.Limb.Int.Capsule ~ PNC$ICV[PNC$sex == "FEMALE"] + s(age,
                                 k=3,
                                 bs = 'tp',
                                 fx=TRUE), 
@@ -609,105 +510,61 @@ plot(gam_F, residuals = TRUE, pch = 1, ylab = "Ant. Limb Internal Capsule", main
 plot(gam_M, residuals = TRUE, pch = 1, ylab = "Ant. Limb Internal Capsule", main = 'Males', cex = 0.75, shade = TRUE, seWithMean = TRUE, shift = coef(gam_F)[1])
 ```
 
-```{r}
-summ_M = summary(gam_M)
-summ_F = summary(gam_F)
-```
-
-- Males: $R^2 =$ `r round(summ_M$r.sq,3)`  
-- Females: $R^2 =$ `r round(summ_F$r.sq,3)` 
-
-## ALIC: Linear Models by Sex
-
-```{r, results='asis'}
-lm_M = lm(scale(Ant.Limb.Int.Capsule) ~ scale(age) + scale((age - mean(age))^2) , data = filter(sig_rois_df, sex == "MALE"))
-lm_F = lm(scale(Ant.Limb.Int.Capsule) ~ scale(age) + scale((age - mean(age))^2) , data = filter(sig_rois_df, sex == "FEMALE"))
-
-# Show table (pretty)
-stargazer(lm_M, lm_F, 
-          column.labels = c("Males", "Females"),
-          dep.var.labels = "Ant. Limb Internal Capsule",
-          covariate.labels = c("Age", "Age (Squared)"),
-          keep.stat = c("rsq"),
-          notes = "Stargazer", 
-          header=FALSE,
-          column.sep.width = "0pt",
-          single.row = TRUE,
-          ci = TRUE,
-          star.cutoffs = c(.05, .01, .001)
-          )
-```
-
 # Harmonization
 
 ## Factors guiding harmonization approach
 
-- Differential Age confound in Males vs. Females
-- ICV, ROI volume differences in Males vs. Females
-- Differential relationships (e.g., ROI-age, ROI-ICV) in Males vs. Females
-- Non-linear age trends in ROIs
+- Differential Age confound in Males vs. Females.
+- ICV, ROI volume differences in Males vs. Females.
+- Differential ROI-age relationships in Males vs. Females.
+- Non-linear age trends in ROIs.
 
 ## Harmonization Approach
 
 Adjusted data are shown for the following approach:  
 
-- Join HC and MS data into one dataset
-- Split this dataset into 2 according to sex.
-- Harmonize (Step 1): Run ComBat-GAM with ICV as target.
-- Harmonize (Step 1): Run ComBat-GAM with 145 as target with harmonized ICV as added covariate.
+1. Split dataset according to sex.  
+1. Harmonize (Step 1): Run ComBat-GAM on ICV.
+1. Harmonize (Step 2): Add harmonized ICV as a covariate. Run ComBat-GAM on 145 ROIs.
 
-Models used in harmonization
+Model used in harmonization (separately on each sex)
 
-- GAM: s(age) + MS + MS*x*age
+- GAM: ICV + s(age) + MS + MS*x*age
 
 ```{r}
-check_roi_site_fx = function(df, roi_names, mod_sex = FALSE, mod_MS = FALSE, mod_interaction = TRUE, print_Ps = FALSE){
-   base_rh_formula = "~ ICV + age + age2"
-   
-   if(mod_sex){
-      if(mod_interaction){
-         sex_terms = " + sex + sex*age + sex*age2"
-      }else{
-         sex_terms = " + sex"
-      }
-   }else{
-      sex_terms = ""
-   }
-   
-   if(mod_MS){
-      if(mod_interaction){
-         ms_terms = " + MS + MS*age + MS*age2"
-      }else{
-         ms_terms = " + MS"
-      }
-         
-   }else{
-      ms_terms = ""
-   }
-   
-   # Decide formula 
-   rh_formula = paste0(base_rh_formula, sex_terms, ms_terms)
-   print(rh_formula)
-   extract_p = function(x) anova(lm(as.formula(paste0(x, rh_formula)), data = df), 
-                                 lm(as.formula(paste0(x, rh_formula, "+ site")), data = df)
-                                       )$`Pr(>F)`[2]
-      
-   
-   Ps = roi_names %>% sapply(extract_p)
-   p_count = c(sum(p.adjust(Ps, method = 'fdr') < 0.05),
+check_roi_site_fx = function(df, roi_names, mod_sex = FALSE, mod_MS = FALSE){
+  
+  if(mod_sex){
+    if(mod_MS){
+      formule = "~ ICV + sex + MS + MS*age + s(age, k=3, bs='tp', fx=TRUE, by=sex)"
+    }else{
+      formule = "~ ICV + sex + s(age, k=3, bs='tp', fx=TRUE, by=sex)"
+    }
+  }else{
+    if(mod_MS){
+      formule = "~ ICV + MS + MS*age + s(age, k=3, bs='tp', fx=TRUE)"
+    }else{
+      formule = "~ ICV + s(age, k=3, bs='tp', fx=TRUE)"
+    }
+  }
+  extract_p = function(x) lmtest::lrtest(gam(as.formula(paste0(x, formule)), 
+                                   data = df),
+                                gam(as.formula(paste0(x, formule, "+ site")), 
+                                   data = df))$`Pr(>Chisq)`[2]
+  Ps = roi_names %>% sapply(extract_p)
+  print(formule)
+  p_count = c(sum(p.adjust(Ps, method = 'fdr') < 0.05),
                sum(p.adjust(Ps, method = 'bonferroni') < 0.05),
                sum(Ps < 0.05)
                )
-   if(print_Ps) print(Ps)
-   names(p_count) = c("FDR", "Bonferroni", "Uncorrected P")
-   invisible(p_count)
+  names(p_count) = c("FDR", "Bonferroni", "Uncorrected P")
+  invisible(p_count)
 }
 ```
 
 ## Testing for site effects
 
 ANOVAs were run on each of the 145 ROIs comparing two versions of covariate model: with and without the inclusion of a site/scanner variable.
-
 
 ## Site effects: MS + HC 
 
@@ -839,7 +696,7 @@ HC_GAM %>% filter(sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FAL
 
 ## Harmonization Conclusions
 
-Insert conclusions
+The current implementation of ComBat-GAM is successful at removing site effects in all subsets of the data!!
 
 
 
