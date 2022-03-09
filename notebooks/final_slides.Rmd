@@ -560,13 +560,17 @@ check_roi_site_fx = function(df, roi_names, mod_sex = FALSE, mod_MS = FALSE){
   names(p_count) = c("FDR", "Bonferroni", "Uncorrected P")
   invisible(p_count)
 }
+
+check_mult_site_fx = function(){
+  
+}
 ```
 
 ## Testing for site effects
 
-ANOVAs were run on each of the 145 ROIs comparing two versions of covariate model: with and without the inclusion of a site/scanner variable.
+ANOVAs were run on each of the 145 ROIs comparing two versions of covariate model: with and without the inclusion of a site/scanner variable. Additive and Multiplicative effects are shown for different subsamples.
 
-## Site effects: MS + HC 
+## Add. site effects: MS + HC 
 
 Number of ROIs showing site effects:
 
@@ -584,7 +588,7 @@ Harmonized data:
 rbind(HC_GAM, MS_GAM) %>% check_roi_site_fx(roi_small, mod_sex = TRUE, mod_MS = TRUE) %>% pander()
 ```
 
-## Site effects: MS + HC [Females]
+## Add. site effects: MS + HC [Females]
 
 Raw:
 
@@ -598,7 +602,7 @@ Harmonized:
 rbind(HC_GAM, MS_GAM) %>%  filter(sex == "FEMALE") %>% check_roi_site_fx(roi_small, mod_MS = TRUE) %>% pander()
 ```
 
-## Site effects: MS + HC [Males]
+## Add. site effects: MS + HC [Males]
 
 Raw:
 
@@ -611,7 +615,7 @@ Harmonized:
 rbind(HC_GAM, MS_GAM) %>% filter(sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_MS = TRUE) %>% pander()
 ```
 
-## Site effects: MS 
+## Add. site effects: MS 
 
 Raw:
 
@@ -626,7 +630,7 @@ MS_GAM %>% check_roi_site_fx(roi_small, mod_sex = TRUE) %>% pander()
 ```
 
 
-## Site effects: MS [Females]
+## Add. site effects: MS [Females]
 
 Raw:
 ```{r}
@@ -640,7 +644,7 @@ MS_GAM %>% filter(sex == "FEMALE") %>%  check_roi_site_fx(roi_small, mod_sex = F
 ```
 
 
-## Site effects: MS [Males]
+## Add. site effects: MS [Males]
 
 Raw:   
 ```{r}
@@ -652,7 +656,7 @@ Harmonized:
 MS_GAM %>% filter(sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
 
-## Site effects: HC
+## Add. site effects: HC
 
 Raw: 
 
@@ -668,7 +672,7 @@ Harmonized:
 HC_GAM %>% check_roi_site_fx(roi_small, mod_sex = TRUE) %>% pander() 
 ```
 
-## Site effect: HC [Females]
+## Add. site effects: HC [Females]
 
 Raw
 
@@ -682,7 +686,7 @@ Harmonized:
 HC_GAM %>% filter(sex == "FEMALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
 
-## Site effects: HC [Males]
+## Add. site effects: HC [Males]
 
 Raw:
 ```{r}
@@ -692,6 +696,166 @@ HC_raw %>% filter(sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FAL
 Harmonized:
 ```{r}
 HC_GAM %>% filter(sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+```
+
+## Mult. site effects: MS + HC 
+
+Number of ROIs showing multiplicative site effects:
+
+Raw data:
+
+```{r}
+check_mult_site_fx = function(df, roi_names, mod_sex = FALSE, mod_MS = FALSE){
+  
+  if(mod_sex){
+    if(mod_MS){
+      formule = "~ ICV + sex + MS + MS*age + s(age, k=3, bs='tp', fx=TRUE, by=sex)"
+    }else{
+      formule = "~ ICV + sex + s(age, k=3, bs='tp', fx=TRUE, by=sex)"
+    }
+  }else{
+    if(mod_MS){
+      formule = "~ ICV + MS + MS*age + s(age, k=3, bs='tp', fx=TRUE)"
+    }else{
+      formule = "~ ICV + s(age, k=3, bs='tp', fx=TRUE)"
+    }
+  }
+  extract_p = function(x) bartlett.test(gam(as.formula(paste0(x, formule)), 
+                                   data = df)$residuals, df$site)$p.value
+  Ps = roi_names %>% sapply(extract_p)
+  print(formule)
+  p_count = c(sum(p.adjust(Ps, method = 'fdr') < 0.05),
+               sum(p.adjust(Ps, method = 'bonferroni') < 0.05),
+               sum(Ps < 0.05)
+               )
+  names(p_count) = c("FDR", "Bonferroni", "Uncorrected P")
+  invisible(p_count)
+}
+
+
+```
+
+
+```{r}
+# Full model
+rbind(HC_raw, MS_raw) %>% check_roi_site_fx(roi_small, mod_sex = TRUE, mod_MS = TRUE) %>% pander()
+```
+
+Harmonized data: 
+
+```{r}
+# Full model
+rbind(HC_GAM, MS_GAM) %>% check_mult_site_fx(roi_small, mod_sex = TRUE, mod_MS = TRUE) %>% pander()
+```
+
+## Mult. site effects: MS + HC [Females]
+
+Raw:
+
+```{r}
+rbind(HC_raw, MS_raw) %>%  filter(sex == "FEMALE") %>% check_mult_site_fx(roi_small, mod_MS = TRUE) %>% pander()
+```
+
+Harmonized:
+
+```{r}
+rbind(HC_GAM, MS_GAM) %>%  filter(sex == "FEMALE") %>% check_mult_site_fx(roi_small, mod_MS = TRUE) %>% pander()
+```
+
+## Mult. site effects: MS + HC [Males]
+
+Raw:
+
+```{r}
+rbind(HC_raw, MS_raw) %>% filter(sex == "MALE") %>%  check_mult_site_fx(roi_small, mod_MS = TRUE) %>% pander()
+```
+
+Harmonized:
+```{r}
+rbind(HC_GAM, MS_GAM) %>% filter(sex == "MALE") %>%  check_mult_site_fx(roi_small, mod_MS = TRUE) %>% pander()
+```
+
+## Mult. site effects: MS 
+
+Raw:
+
+```{r}
+# Full model
+MS_raw %>% check_mult_site_fx(roi_small, mod_sex = TRUE) %>% pander() 
+```
+
+Harmonized:
+```{r}
+MS_GAM %>% check_mult_site_fx(roi_small, mod_sex = TRUE) %>% pander() 
+```
+
+
+## Mult. site effects: MS [Females]
+
+Raw:
+```{r}
+MS_raw %>% filter(sex == "FEMALE") %>%  check_mult_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+```
+
+Harmonized:
+
+```{r}
+MS_GAM %>% filter(sex == "FEMALE") %>%  check_mult_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+```
+
+
+## Mult. site effects: MS [Males]
+
+Raw:   
+```{r}
+MS_GAM %>% filter(sex == "MALE") %>%  check_mult_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+```
+
+Harmonized:  
+```{r}
+MS_GAM %>% filter(sex == "MALE") %>%  check_mult_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+```
+
+## Mult. site effects: HC
+
+Raw: 
+
+```{r}
+# Full model
+HC_raw %>% check_mult_site_fx(roi_small, mod_sex = TRUE) %>% pander() 
+```
+
+Harmonized: 
+
+```{r}
+# Full model
+HC_GAM %>% check_mult_site_fx(roi_small, mod_sex = TRUE) %>% pander() 
+```
+
+## Mult. site effects: HC [Females]
+
+Raw
+
+```{r}
+HC_raw %>% filter(sex == "FEMALE") %>%  check_mult_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+```
+
+Harmonized:
+
+```{r}
+HC_GAM %>% filter(sex == "FEMALE") %>%  check_mult_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+```
+
+## Mult. site effects: HC [Males]
+
+Raw:
+```{r}
+HC_raw %>% filter(sex == "MALE") %>%  check_mult_site_fx(roi_small, mod_sex = FALSE) %>% pander()
+```
+
+Harmonized:
+```{r}
+HC_GAM %>% filter(sex == "MALE") %>%  check_mult_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
 
 ## Harmonization Conclusions

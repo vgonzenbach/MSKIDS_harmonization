@@ -1,31 +1,31 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020) (preloaded format=pdflatex 2021.3.1)  9 APR 2021 15:10
+This is pdfTeX, Version 3.141592653-2.6-1.40.23 (TeX Live 2022/dev) (preloaded format=pdflatex 2021.10.15)  9 MAR 2022 17:24
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
 **final_slides.tex
 (./final_slides.tex
-LaTeX2e <2020-10-01> patch level 4
-L3 programming layer <2021-02-18> (/Users/vgonzenb/Library/TinyTeX/texmf-dist/t
+LaTeX2e <2021-06-01> patch level 1
+L3 programming layer <2021-10-12> (/Users/vgonzenb/Library/TinyTeX/texmf-dist/t
 ex/latex/beamer/beamer.cls
-Document Class: beamer 2021/02/09 v3.61 A class for typesetting presentations
+Document Class: beamer 2021/05/26 v3.63 A class for typesetting presentations
 
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbasemodes.st
 y (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/etoolbox/etoolbox.sty
 Package: etoolbox 2020/10/05 v2.5k e-TeX tools for LaTeX (JAW)
-\etb@tempcnta=\count179
+\etb@tempcnta=\count182
 )
-\beamer@tempbox=\box47
-\beamer@tempcount=\count180
-\c@beamerpauses=\count181
+\beamer@tempbox=\box50
+\beamer@tempcount=\count183
+\c@beamerpauses=\count184
 
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbasedecode.s
 ty
-\beamer@slideinframe=\count182
-\beamer@minimum=\count183
-\beamer@decode@box=\box48
+\beamer@slideinframe=\count185
+\beamer@minimum=\count186
+\beamer@decode@box=\box51
 )
-\beamer@commentbox=\box49
-\beamer@modecount=\count184
+\beamer@commentbox=\box52
+\beamer@modecount=\count187
 ) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/iftex/ifpdf.sty
 Package: ifpdf 2019/10/25 v3.4 ifpdf legacy package. Use iftex instead.
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/iftex/iftex.sty
@@ -48,36 +48,37 @@ Package: iftex 2020/03/06 v1.0d TeX engine tests
 \beamer@descdefault=\dimen152
 \beamer@descriptionwidth=\dimen153
 \beamer@lastskip=\skip47
-\beamer@areabox=\box50
-\beamer@animcurrent=\box51
-\beamer@animshowbox=\box52
-\beamer@sectionbox=\box53
-\beamer@logobox=\box54
-\beamer@linebox=\box55
-\beamer@sectioncount=\count185
-\beamer@subsubsectionmax=\count186
-\beamer@subsectionmax=\count187
-\beamer@sectionmax=\count188
-\beamer@totalheads=\count189
-\beamer@headcounter=\count190
-\beamer@partstartpage=\count191
-\beamer@sectionstartpage=\count192
-\beamer@subsectionstartpage=\count193
-\beamer@animationtempa=\count194
-\beamer@animationtempb=\count195
-\beamer@xpos=\count196
-\beamer@ypos=\count197
-\beamer@ypos@offset=\count198
-\beamer@showpartnumber=\count199
-\beamer@currentsubsection=\count266
-\beamer@coveringdepth=\count267
-\beamer@sectionadjust=\count268
-\beamer@tocsectionnumber=\count269
+\beamer@areabox=\box53
+\beamer@animcurrent=\box54
+\beamer@animshowbox=\box55
+\beamer@sectionbox=\box56
+\beamer@logobox=\box57
+\beamer@linebox=\box58
+\beamer@sectioncount=\count188
+\beamer@subsubsectionmax=\count189
+\beamer@subsectionmax=\count190
+\beamer@sectionmax=\count191
+\beamer@totalheads=\count192
+\beamer@headcounter=\count193
+\beamer@partstartpage=\count194
+\beamer@sectionstartpage=\count195
+\beamer@subsectionstartpage=\count196
+\beamer@animationtempa=\count197
+\beamer@animationtempb=\count198
+\beamer@xpos=\count199
+\beamer@ypos=\count266
+\beamer@ypos@offset=\count267
+\beamer@showpartnumber=\count268
+\beamer@currentsubsection=\count269
+\beamer@coveringdepth=\count270
+\beamer@sectionadjust=\count271
+\beamer@toclastsection=\count272
+\beamer@tocsectionnumber=\count273
 
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbaseoptions.
 sty (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/graphics/keyval.sty
 Package: keyval 2014/10/28 v1.15 key=value parser (DPC)
-\KV@toks@=\toks15
+\KV@toks@=\toks16
 ))
 \beamer@paperwidth=\skip48
 \beamer@paperheight=\skip49
@@ -86,9 +87,9 @@ Package: geometry 2020/01/02 v5.9 Page Geometry
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/iftex/ifvtex.sty
 Package: ifvtex 2019/10/25 v1.7 ifvtex legacy package. Use iftex instead.
 )
-\Gm@cnth=\count270
-\Gm@cntv=\count271
-\c@Gm@tempcnt=\count272
+\Gm@cnth=\count274
+\Gm@cntv=\count275
+\c@Gm@tempcnt=\count276
 \Gm@bindingoffset=\dimen154
 \Gm@wd@mp=\dimen155
 \Gm@odd@mp=\dimen156
@@ -97,22 +98,22 @@ Package: ifvtex 2019/10/25 v1.7 ifvtex legacy package. Use iftex instead.
 \Gm@layoutheight=\dimen159
 \Gm@layouthoffset=\dimen160
 \Gm@layoutvoffset=\dimen161
-\Gm@dimlist=\toks16
+\Gm@dimlist=\toks17
 ) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/base/size11.clo
-File: size11.clo 2020/04/10 v1.4m Standard LaTeX file (size option)
+File: size11.clo 2021/02/12 v1.4n Standard LaTeX file (size option)
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/pgf/basiclayer/pgfcore.st
 y (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/graphics/graphicx.sty
-Package: graphicx 2020/09/09 v1.2b Enhanced LaTeX Graphics (DPC,SPQR)
+Package: graphicx 2020/12/05 v1.2c Enhanced LaTeX Graphics (DPC,SPQR)
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/graphics/graphics.sty
-Package: graphics 2020/08/30 v1.4c Standard LaTeX Graphics (DPC,SPQR)
+Package: graphics 2021/03/04 v1.4d Standard LaTeX Graphics (DPC,SPQR)
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/graphics/trig.sty
 Package: trig 2016/01/03 v1.10 sin cos tan (DPC)
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/graphics-cfg/graphics.cfg
 File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
 )
-Package graphics Info: Driver file: pdftex.def on input line 105.
+Package graphics Info: Driver file: pdftex.def on input line 107.
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/graphics-def/pdftex.def
 File: pdftex.def 2020/10/05 v1.2a Graphics/color driver for pdftex
 ))
@@ -124,7 +125,7 @@ y (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/pgf/utilities/pgfrcs.st
 y
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/utilities/pgfutil-c
 ommon.tex
-\pgfutil@everybye=\toks17
+\pgfutil@everybye=\toks18
 \pgfutil@tempdima=\dimen164
 \pgfutil@tempdimb=\dimen165
 
@@ -132,25 +133,25 @@ ommon.tex
 ommon-lists.tex))
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/utilities/pgfutil-l
 atex.def
-\pgfutil@abb=\box56
+\pgfutil@abb=\box59
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/utilities/pgfrcs.co
 de.tex (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/pgf.revision
 .tex)
-Package: pgfrcs 2020/12/27 v3.1.8b (3.1.8b)
+Package: pgfrcs 2021/05/15 v3.1.9a (3.1.9a)
 ))
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/systemlayer/pgfsys.
 code.tex
-Package: pgfsys 2020/12/27 v3.1.8b (3.1.8b)
+Package: pgfsys 2021/05/15 v3.1.9a (3.1.9a)
 
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/utilities/pgfkeys.c
 ode.tex
-\pgfkeys@pathtoks=\toks18
-\pgfkeys@temptoks=\toks19
+\pgfkeys@pathtoks=\toks19
+\pgfkeys@temptoks=\toks20
 
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/utilities/pgfkeysfi
 ltered.code.tex
-\pgfkeys@tmptoks=\toks20
+\pgfkeys@tmptoks=\toks21
 ))
 \pgf@x=\dimen166
 \pgf@y=\dimen167
@@ -164,37 +165,37 @@ ltered.code.tex
 \pgf@yd=\dimen175
 \w@pgf@writea=\write3
 \r@pgf@reada=\read2
-\c@pgf@counta=\count273
-\c@pgf@countb=\count274
-\c@pgf@countc=\count275
-\c@pgf@countd=\count276
-\t@pgf@toka=\toks21
-\t@pgf@tokb=\toks22
-\t@pgf@tokc=\toks23
-\pgf@sys@id@count=\count277
+\c@pgf@counta=\count277
+\c@pgf@countb=\count278
+\c@pgf@countc=\count279
+\c@pgf@countd=\count280
+\t@pgf@toka=\toks22
+\t@pgf@tokb=\toks23
+\t@pgf@tokc=\toks24
+\pgf@sys@id@count=\count281
 
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/systemlayer/pgf.cfg
-File: pgf.cfg 2020/12/27 v3.1.8b (3.1.8b)
+File: pgf.cfg 2021/05/15 v3.1.9a (3.1.9a)
 )
 Driver file for pgf: pgfsys-pdftex.def
 
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/systemlayer/pgfsys-
 pdftex.def
-File: pgfsys-pdftex.def 2020/12/27 v3.1.8b (3.1.8b)
+File: pgfsys-pdftex.def 2021/05/15 v3.1.9a (3.1.9a)
 
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/systemlayer/pgfsys-
 common-pdf.def
-File: pgfsys-common-pdf.def 2020/12/27 v3.1.8b (3.1.8b)
+File: pgfsys-common-pdf.def 2021/05/15 v3.1.9a (3.1.9a)
 )))
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/systemlayer/pgfsyss
 oftpath.code.tex
-File: pgfsyssoftpath.code.tex 2020/12/27 v3.1.8b (3.1.8b)
-\pgfsyssoftpath@smallbuffer@items=\count278
-\pgfsyssoftpath@bigbuffer@items=\count279
+File: pgfsyssoftpath.code.tex 2021/05/15 v3.1.9a (3.1.9a)
+\pgfsyssoftpath@smallbuffer@items=\count282
+\pgfsyssoftpath@bigbuffer@items=\count283
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/systemlayer/pgfsysp
 rotocol.code.tex
-File: pgfsysprotocol.code.tex 2020/12/27 v3.1.8b (3.1.8b)
+File: pgfsysprotocol.code.tex 2021/05/15 v3.1.9a (3.1.9a)
 )) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/xcolor/xcolor.sty
 Package: xcolor 2016/05/11 v2.12 LaTeX color extensions (UK)
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/graphics-cfg/color.cfg
@@ -213,7 +214,7 @@ Package xcolor Info: Model `wave' substituted by `hsb' on input line 1371.
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/pgfcore.
 code.tex
-Package: pgfcore 2020/12/27 v3.1.8b (3.1.8b)
+Package: pgfcore 2021/05/15 v3.1.9a (3.1.9a)
 
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/math/pgfmath.code.t
 ex
@@ -224,11 +225,11 @@ de.tex)
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/math/pgfmathparser.
 code.tex
 \pgfmath@dimen=\dimen176
-\pgfmath@count=\count280
-\pgfmath@box=\box57
-\pgfmath@toks=\toks24
-\pgfmath@stack@operand=\toks25
-\pgfmath@stack@operation=\toks26
+\pgfmath@count=\count284
+\pgfmath@box=\box60
+\pgfmath@toks=\toks25
+\pgfmath@stack@operand=\toks26
+\pgfmath@stack@operation=\toks27
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/math/pgfmathfunctio
 ns.code.tex
@@ -250,13 +251,13 @@ ns.misc.code.tex)
 ns.integerarithmetics.code.tex)))
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/math/pgfmathfloat.c
 ode.tex
-\c@pgfmathroundto@lastzeros=\count281
+\c@pgfmathroundto@lastzeros=\count285
 ))
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/math/pgfint.code.te
 x)
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/pgfcorep
 oints.code.tex
-File: pgfcorepoints.code.tex 2020/12/27 v3.1.8b (3.1.8b)
+File: pgfcorepoints.code.tex 2021/05/15 v3.1.9a (3.1.9a)
 \pgf@picminx=\dimen177
 \pgf@picmaxx=\dimen178
 \pgf@picminy=\dimen179
@@ -274,95 +275,94 @@ File: pgfcorepoints.code.tex 2020/12/27 v3.1.8b (3.1.8b)
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/pgfcorep
 athconstruct.code.tex
-File: pgfcorepathconstruct.code.tex 2020/12/27 v3.1.8b (3.1.8b)
+File: pgfcorepathconstruct.code.tex 2021/05/15 v3.1.9a (3.1.9a)
 \pgf@path@lastx=\dimen191
 \pgf@path@lasty=\dimen192
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/pgfcorep
 athusage.code.tex
-File: pgfcorepathusage.code.tex 2020/12/27 v3.1.8b (3.1.8b)
+File: pgfcorepathusage.code.tex 2021/05/15 v3.1.9a (3.1.9a)
 \pgf@shorten@end@additional=\dimen193
 \pgf@shorten@start@additional=\dimen194
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/pgfcores
 copes.code.tex
-File: pgfcorescopes.code.tex 2020/12/27 v3.1.8b (3.1.8b)
-\pgfpic=\box58
-\pgf@hbox=\box59
-\pgf@layerbox@main=\box60
-\pgf@picture@serial@count=\count282
+File: pgfcorescopes.code.tex 2021/05/15 v3.1.9a (3.1.9a)
+\pgfpic=\box61
+\pgf@hbox=\box62
+\pgf@layerbox@main=\box63
+\pgf@picture@serial@count=\count286
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreg
 raphicstate.code.tex
-File: pgfcoregraphicstate.code.tex 2020/12/27 v3.1.8b (3.1.8b)
+File: pgfcoregraphicstate.code.tex 2021/05/15 v3.1.9a (3.1.9a)
 \pgflinewidth=\dimen195
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/pgfcoret
 ransformations.code.tex
-File: pgfcoretransformations.code.tex 2020/12/27 v3.1.8b (3.1.8b)
+File: pgfcoretransformations.code.tex 2021/05/15 v3.1.9a (3.1.9a)
 \pgf@pt@x=\dimen196
 \pgf@pt@y=\dimen197
 \pgf@pt@temp=\dimen198
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreq
 uick.code.tex
-File: pgfcorequick.code.tex 2020/12/27 v3.1.8b (3.1.8b)
+File: pgfcorequick.code.tex 2021/05/15 v3.1.9a (3.1.9a)
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreo
 bjects.code.tex
-File: pgfcoreobjects.code.tex 2020/12/27 v3.1.8b (3.1.8b)
+File: pgfcoreobjects.code.tex 2021/05/15 v3.1.9a (3.1.9a)
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/pgfcorep
 athprocessing.code.tex
-File: pgfcorepathprocessing.code.tex 2020/12/27 v3.1.8b (3.1.8b)
+File: pgfcorepathprocessing.code.tex 2021/05/15 v3.1.9a (3.1.9a)
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/pgfcorea
 rrows.code.tex
-File: pgfcorearrows.code.tex 2020/12/27 v3.1.8b (3.1.8b)
+File: pgfcorearrows.code.tex 2021/05/15 v3.1.9a (3.1.9a)
 \pgfarrowsep=\dimen199
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/pgfcores
 hade.code.tex
-File: pgfcoreshade.code.tex 2020/12/27 v3.1.8b (3.1.8b)
+File: pgfcoreshade.code.tex 2021/05/15 v3.1.9a (3.1.9a)
 \pgf@max=\dimen256
-\pgf@sys@shading@range@num=\count283
-\pgf@shadingcount=\count284
+\pgf@sys@shading@range@num=\count287
+\pgf@shadingcount=\count288
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/pgfcorei
 mage.code.tex
-File: pgfcoreimage.code.tex 2020/12/27 v3.1.8b (3.1.8b)
+File: pgfcoreimage.code.tex 2021/05/15 v3.1.9a (3.1.9a)
 
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/pgfcoree
 xternal.code.tex
-File: pgfcoreexternal.code.tex 2020/12/27 v3.1.8b (3.1.8b)
-\pgfexternal@startupbox=\box61
+File: pgfcoreexternal.code.tex 2021/05/15 v3.1.9a (3.1.9a)
+\pgfexternal@startupbox=\box64
 ))
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/pgfcorel
 ayers.code.tex
-File: pgfcorelayers.code.tex 2020/12/27 v3.1.8b (3.1.8b)
+File: pgfcorelayers.code.tex 2021/05/15 v3.1.9a (3.1.9a)
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/pgfcoret
 ransparency.code.tex
-File: pgfcoretransparency.code.tex 2020/12/27 v3.1.8b (3.1.8b)
+File: pgfcoretransparency.code.tex 2021/05/15 v3.1.9a (3.1.9a)
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/pgfcorep
 atterns.code.tex
-File: pgfcorepatterns.code.tex 2020/12/27 v3.1.8b (3.1.8b)
+File: pgfcorepatterns.code.tex 2021/05/15 v3.1.9a (3.1.9a)
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/pgfcorer
 df.code.tex
-File: pgfcorerdf.code.tex 2020/12/27 v3.1.8b (3.1.8b)
+File: pgfcorerdf.code.tex 2021/05/15 v3.1.9a (3.1.9a)
 )))
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/pgf/utilities/xxcolor.sty
 Package: xxcolor 2003/10/24 ver 0.1
-\XC@nummixins=\count285
-\XC@countmixins=\count286
+\XC@nummixins=\count289
+\XC@countmixins=\count290
 ) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/base/atbegshi-ltx.sty
-Package: atbegshi-ltx 2020/08/17 v1.0a Emulation of the original atbegshi packa
-ge
-with kernel methods
+Package: atbegshi-ltx 2021/01/10 v1.0c Emulation of the original atbegshi
+package with kernel methods
 ) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/hyperref/hyperref.sty
-Package: hyperref 2021-02-10 v7.00j Hypertext links for LaTeX
+Package: hyperref 2021-06-07 v7.00m Hypertext links for LaTeX
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/ltxcmds/ltxcmds.sty
 Package: ltxcmds 2020-05-10 v1.25 LaTeX kernel commands for general use (HO)
 )
@@ -399,25 +399,25 @@ Package: auxhook 2019-12-17 v1.6 Hooks for auxiliary files (HO)
 Package: kvoptions 2020-10-07 v3.14 Key value format for package options (HO)
 )
 \@linkdim=\dimen257
-\Hy@linkcounter=\count287
-\Hy@pagecounter=\count288
+\Hy@linkcounter=\count291
+\Hy@pagecounter=\count292
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/hyperref/pd1enc.def
-File: pd1enc.def 2021-02-10 v7.00j Hyperref: PDFDocEncoding definition (HO)
+File: pd1enc.def 2021-06-07 v7.00m Hyperref: PDFDocEncoding definition (HO)
 Now handling font encoding PD1 ...
 ... no UTF-8 mapping file for font encoding PD1
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/hyperref/hyperref-langpat
 ches.def
-File: hyperref-langpatches.def 2021-02-10 v7.00j Hyperref: patches for babel la
+File: hyperref-langpatches.def 2021-06-07 v7.00m Hyperref: patches for babel la
 nguages
 ) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/intcalc/intcalc.sty
 Package: intcalc 2019/12/15 v1.3 Expandable calculations with integers (HO)
 ) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/etexcmds/etexcmds.sty
 Package: etexcmds 2019/12/15 v1.7 Avoid name clashes with e-TeX commands (HO)
 )
-\Hy@SavedSpaceFactor=\count289
+\Hy@SavedSpaceFactor=\count293
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/hyperref/puenc.def
-File: puenc.def 2021-02-10 v7.00j Hyperref: PDF Unicode definition (HO)
+File: puenc.def 2021-06-07 v7.00m Hyperref: PDF Unicode definition (HO)
 Now handling font encoding PU ...
 ... no UTF-8 mapping file for font encoding PU
 )
@@ -432,7 +432,7 @@ Package hyperref Info: Plain pages OFF on input line 4207.
 Package hyperref Info: Backreferencing OFF on input line 4212.
 Package hyperref Info: Implicit mode OFF; no redefinition of LaTeX internals.
 Package hyperref Info: Bookmarks ON on input line 4445.
-\c@Hy@tempcnt=\count290
+\c@Hy@tempcnt=\count294
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/url/url.sty
 \Urlmuskip=\muskip16
 Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
@@ -447,33 +447,33 @@ ty
 Package: bigintcalc 2019/12/15 v1.5 Expandable calculations on big integers (HO
 )
 ))
-\Fld@menulength=\count291
+\Fld@menulength=\count295
 \Field@Width=\dimen259
 \Fld@charsize=\dimen260
-Package hyperref Info: Hyper figures OFF on input line 6075.
-Package hyperref Info: Link nesting OFF on input line 6080.
-Package hyperref Info: Hyper index ON on input line 6083.
-Package hyperref Info: backreferencing OFF on input line 6090.
-Package hyperref Info: Link coloring OFF on input line 6095.
-Package hyperref Info: Link coloring with OCG OFF on input line 6100.
-Package hyperref Info: PDF/A mode OFF on input line 6105.
-LaTeX Info: Redefining \ref on input line 6145.
-LaTeX Info: Redefining \pageref on input line 6149.
-\Hy@abspage=\count292
+Package hyperref Info: Hyper figures OFF on input line 6076.
+Package hyperref Info: Link nesting OFF on input line 6081.
+Package hyperref Info: Hyper index ON on input line 6084.
+Package hyperref Info: backreferencing OFF on input line 6091.
+Package hyperref Info: Link coloring OFF on input line 6096.
+Package hyperref Info: Link coloring with OCG OFF on input line 6101.
+Package hyperref Info: PDF/A mode OFF on input line 6106.
+LaTeX Info: Redefining \ref on input line 6146.
+LaTeX Info: Redefining \pageref on input line 6150.
+\Hy@abspage=\count296
 
 Package hyperref Message: Stopped early.
 
 )
 Package hyperref Info: Driver (autodetected): hpdftex.
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/hyperref/hpdftex.def
-File: hpdftex.def 2021-02-10 v7.00j Hyperref driver for pdfTeX
+File: hpdftex.def 2021-06-07 v7.00m Hyperref driver for pdfTeX
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/base/atveryend-ltx.sty
 Package: atveryend-ltx 2020/08/19 v1.0a Emulation of the original atvery packag
 e
 with kernel methods
 )
-\Fld@listcount=\count293
-\c@bookmark@seq@number=\count294
+\Fld@listcount=\count297
+\c@bookmark@seq@number=\count298
 
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/rerunfilecheck/rerunfilec
 heck.sty
@@ -495,7 +495,7 @@ ility.sty)
 Package: amssymb 2013/01/14 v3.01 AMS font symbols
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/amsfonts/amsfonts.sty
 Package: amsfonts 2013/01/14 v3.01 Basic AMSFonts support
-\@emptytoks=\toks27
+\@emptytoks=\toks28
 \symAMSa=\mathgroup4
 \symAMSb=\mathgroup5
 LaTeX Font Info:    Redeclaring math symbol \hbar on input line 98.
@@ -505,7 +505,7 @@ LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbasetranslat
 or.sty
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/translator/translator.sty
-Package: translator 2020-08-03 v1.12c Easy translation of strings in LaTeX
+Package: translator 2021-05-31 v1.12d Easy translation of strings in LaTeX
 ))
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbasemisc.sty
 )
@@ -513,36 +513,36 @@ Package: translator 2020-08-03 v1.12c Easy translation of strings in LaTeX
 ns.sty)
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbaseoverlay.
 sty
-\beamer@argscount=\count295
+\beamer@argscount=\count299
 \beamer@lastskipcover=\skip50
-\beamer@trivlistdepth=\count296
+\beamer@trivlistdepth=\count300
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbasetitle.st
 y)
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbasesection.
 sty
-\c@lecture=\count297
-\c@part=\count298
-\c@section=\count299
-\c@subsection=\count300
-\c@subsubsection=\count301
+\c@lecture=\count301
+\c@part=\count302
+\c@section=\count303
+\c@subsection=\count304
+\c@subsubsection=\count305
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbaseframe.st
 y
-\beamer@framebox=\box62
-\beamer@frametitlebox=\box63
-\beamer@zoombox=\box64
-\beamer@zoomcount=\count302
-\beamer@zoomframecount=\count303
+\beamer@framebox=\box65
+\beamer@frametitlebox=\box66
+\beamer@zoombox=\box67
+\beamer@zoomcount=\count306
+\beamer@zoomframecount=\count307
 \beamer@frametextheight=\dimen261
-\c@subsectionslide=\count304
+\c@subsectionslide=\count308
 \beamer@frametopskip=\skip51
 \beamer@framebottomskip=\skip52
 \beamer@frametopskipautobreak=\skip53
 \beamer@framebottomskipautobreak=\skip54
-\beamer@envbody=\toks28
+\beamer@envbody=\toks29
 \framewidth=\dimen262
-\c@framenumber=\count305
+\c@framenumber=\count309
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbaseverbatim
 .sty
@@ -550,33 +550,33 @@ y
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbaseframesiz
 e.sty
-\beamer@splitbox=\box65
-\beamer@autobreakcount=\count306
+\beamer@splitbox=\box68
+\beamer@autobreakcount=\count310
 \beamer@autobreaklastheight=\dimen263
-\beamer@frametitletoks=\toks29
-\beamer@framesubtitletoks=\toks30
+\beamer@frametitletoks=\toks30
+\beamer@framesubtitletoks=\toks31
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbaseframecom
 ponents.sty
-\beamer@footins=\box66
+\beamer@footins=\box69
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbasecolor.st
 y)
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbasenotes.st
 y
-\beamer@frameboxcopy=\box67
+\beamer@frameboxcopy=\box70
 ) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbasetoc.st
 y)
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbasetemplate
 s.sty
-\beamer@sbttoks=\toks31
+\beamer@sbttoks=\toks32
 
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbaseauxtempl
 ates.sty
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbaseboxes.st
 y
-\bmb@box=\box68
-\bmb@colorbox=\box69
+\bmb@box=\box71
+\bmb@colorbox=\box72
 \bmb@boxwidth=\dimen264
 \bmb@boxheight=\dimen265
 \bmb@prevheight=\dimen266
@@ -591,11 +591,11 @@ y
 ucture.sty (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/tools/enumerat
 e.sty
 Package: enumerate 2015/07/23 v3.00 enumerate extensions (DPC)
-\@enLab=\toks32
+\@enLab=\toks33
 )
 \beamer@bibiconwidth=\skip55
-\c@figure=\count307
-\c@table=\count308
+\c@figure=\count311
+\c@table=\count312
 \abovecaptionskip=\skip56
 \belowcaptionskip=\skip57
 )
@@ -605,14 +605,14 @@ on.sty
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbasetheorems
 .sty (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/amsmath/amsmath.sty
-Package: amsmath 2020/09/23 v2.17i AMS math features
+Package: amsmath 2021/04/20 v2.17j AMS math features
 \@mathmargin=\skip58
 For additional information on amsmath, use the `?' option.
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/amsmath/amstext.sty
 Package: amstext 2000/06/29 v2.01 AMS text
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/amsmath/amsgen.sty
 File: amsgen.sty 1999/11/30 v2.0 generic functions
-\@emptytoks=\toks33
+\@emptytoks=\toks34
 \ex@=\dimen273
 )) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/amsmath/amsbsy.sty
 Package: amsbsy 1999/11/29 v1.2d Bold Symbols
@@ -620,56 +620,56 @@ Package: amsbsy 1999/11/29 v1.2d Bold Symbols
 ) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/amsmath/amsopn.sty
 Package: amsopn 2016/03/08 v2.02 operator names
 )
-\inf@bad=\count309
+\inf@bad=\count313
 LaTeX Info: Redefining \frac on input line 234.
-\uproot@=\count310
-\leftroot@=\count311
+\uproot@=\count314
+\leftroot@=\count315
 LaTeX Info: Redefining \overline on input line 399.
-\classnum@=\count312
-\DOTSCASE@=\count313
+\classnum@=\count316
+\DOTSCASE@=\count317
 LaTeX Info: Redefining \ldots on input line 496.
 LaTeX Info: Redefining \dots on input line 499.
 LaTeX Info: Redefining \cdots on input line 620.
-\Mathstrutbox@=\box70
-\strutbox@=\box71
+\Mathstrutbox@=\box73
+\strutbox@=\box74
 \big@size=\dimen275
 LaTeX Font Info:    Redeclaring font encoding OML on input line 743.
 LaTeX Font Info:    Redeclaring font encoding OMS on input line 744.
-\macc@depth=\count314
-\c@MaxMatrixCols=\count315
+\macc@depth=\count318
+\c@MaxMatrixCols=\count319
 \dotsspace@=\muskip17
-\c@parentequation=\count316
-\dspbrk@lvl=\count317
-\tag@help=\toks34
-\row@=\count318
-\column@=\count319
-\maxfields@=\count320
-\andhelp@=\toks35
+\c@parentequation=\count320
+\dspbrk@lvl=\count321
+\tag@help=\toks35
+\row@=\count322
+\column@=\count323
+\maxfields@=\count324
+\andhelp@=\toks36
 \eqnshift@=\dimen276
 \alignsep@=\dimen277
 \tagshift@=\dimen278
 \tagwidth@=\dimen279
 \totwidth@=\dimen280
 \lineht@=\dimen281
-\@envbody=\toks36
+\@envbody=\toks37
 \multlinegap=\skip59
 \multlinetaggap=\skip60
-\mathdisplay@stack=\toks37
+\mathdisplay@stack=\toks38
 LaTeX Info: Redefining \[ on input line 2923.
 LaTeX Info: Redefining \] on input line 2924.
 ) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/amscls/amsthm.sty
 Package: amsthm 2020/05/29 v2.20.6
-\thm@style=\toks38
-\thm@bodyfont=\toks39
-\thm@headfont=\toks40
-\thm@notefont=\toks41
-\thm@headpunct=\toks42
+\thm@style=\toks39
+\thm@bodyfont=\toks40
+\thm@headfont=\toks41
+\thm@notefont=\toks42
+\thm@headpunct=\toks43
 \thm@preskip=\skip61
 \thm@postskip=\skip62
 \thm@headsep=\skip63
-\dth@everypar=\toks43
+\dth@everypar=\toks44
 )
-\c@theorem=\count321
+\c@theorem=\count325
 )
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerbasethemes.s
 ty))
@@ -691,28 +691,28 @@ y
 Package: pgfpages 2011/01/05 ver 0.02
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/tools/calc.sty
 Package: calc 2017/05/25 v4.3 Infix arithmetic (KKT,FJ)
-\calc@Acount=\count322
-\calc@Bcount=\count323
+\calc@Acount=\count326
+\calc@Bcount=\count327
 \calc@Adimen=\dimen284
 \calc@Bdimen=\dimen285
 \calc@Askip=\skip64
 \calc@Bskip=\skip65
 LaTeX Info: Redefining \setlength on input line 80.
 LaTeX Info: Redefining \addtolength on input line 81.
-\calc@Ccount=\count324
+\calc@Ccount=\count328
 \calc@Cskip=\skip66
 )
-\pgf@logicalpages=\count325
-\pgf@firstshipout=\count326
-\pgf@lastshipout=\count327
-\pgf@currentshipout=\count328
-\pgf@cpn=\count329
-\pgf@shipoutnextto=\count330
+\pgf@logicalpages=\count329
+\pgf@firstshipout=\count330
+\pgf@lastshipout=\count331
+\pgf@currentshipout=\count332
+\pgf@cpn=\count333
+\pgf@shipoutnextto=\count334
 \pgfphysicalheight=\dimen286
 \pgfphysicalwidth=\dimen287
-\pgfpages@shipoutbox=\box72
+\pgfpages@shipoutbox=\box75
 ) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/lm/lmodern.sty
-Package: lmodern 2009/10/30 v1.6 Latin Modern Fonts
+Package: lmodern 2015/05/01 v1.6.1 Latin Modern Fonts
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
 (Font)                  OT1/cmr/m/n --> OT1/lmr/m/n on input line 22.
 LaTeX Font Info:    Overwriting symbol font `letters' in version `normal'
@@ -750,15 +750,15 @@ Package: ifxetex 2019/10/25 v0.7 ifxetex legacy package. Use iftex instead.
 ) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/generic/iftex/ifluatex.sty
 Package: ifluatex 2019/10/25 v1.5 ifluatex legacy package. Use iftex instead.
 ) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/base/fontenc.sty
-Package: fontenc 2020/08/10 v2.0s Standard LaTeX package
+Package: fontenc 2021/04/29 v2.0v Standard LaTeX package
 LaTeX Font Info:    Trying to load font information for T1+lmss on input line 1
 12.
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/lm/t1lmss.fd
-File: t1lmss.fd 2009/10/30 v1.6 Font defs for Latin Modern
+File: t1lmss.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/base/inputenc.sty
-Package: inputenc 2020/08/01 v1.3d Input encoding file
-\inpenc@prehook=\toks44
-\inpenc@posthook=\toks45
+Package: inputenc 2021/02/14 v1.3d Input encoding file
+\inpenc@prehook=\toks45
+\inpenc@posthook=\toks46
 ) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/base/textcomp.sty
 Package: textcomp 2020/02/02 v2.0n Standard LaTeX package
 )
@@ -775,22 +775,23 @@ aver.sty)
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/beamer/beamerfontthemestr
 ucturebold.sty) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/tools/lon
 gtable.sty
-Package: longtable 2020/01/07 v4.13 Multi-page Table package (DPC)
+Package: longtable 2021-05-07 v4.16 Multi-page Table package (DPC)
 \LTleft=\skip67
 \LTright=\skip68
 \LTpre=\skip69
 \LTpost=\skip70
-\LTchunksize=\count331
+\LTchunksize=\count335
 \LTcapwidth=\dimen288
-\LT@head=\box73
-\LT@firsthead=\box74
-\LT@foot=\box75
-\LT@lastfoot=\box76
-\LT@cols=\count332
-\LT@rows=\count333
-\c@LT@tables=\count334
-\c@LT@chunks=\count335
-\LT@p@ftn=\toks46
+\LT@head=\box76
+\LT@firsthead=\box77
+\LT@foot=\box78
+\LT@lastfoot=\box79
+\LT@gbox=\box80
+\LT@cols=\count336
+\LT@rows=\count337
+\c@LT@tables=\count338
+\c@LT@chunks=\count339
+\LT@p@ftn=\toks47
 ) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/booktabs/booktabs.sty
 Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
 \heavyrulewidth=\dimen289
@@ -803,22 +804,22 @@ Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
 \cmidrulesep=\dimen296
 \cmidrulekern=\dimen297
 \defaultaddspace=\dimen298
-\@cmidla=\count336
-\@cmidlb=\count337
+\@cmidla=\count340
+\@cmidlb=\count341
 \@aboverulesep=\dimen299
 \@belowrulesep=\dimen300
-\@thisruleclass=\count338
-\@lastruleclass=\count339
+\@thisruleclass=\count342
+\@lastruleclass=\count343
 \@thisrulewidth=\dimen301
 ) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/tools/array.sty
-Package: array 2020/10/01 v2.5c Tabular extension package (FMi)
+Package: array 2021/04/20 v2.5e Tabular extension package (FMi)
 \col@sep=\dimen302
-\ar@mcellbox=\box77
+\ar@mcellbox=\box81
 \extrarowheight=\dimen303
-\NC@list=\toks47
+\NC@list=\toks48
 \extratabsurround=\skip71
 \backup@length=\skip72
-\ar@cellbox=\box78
+\ar@cellbox=\box82
 ) (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/caption/caption.sty
 Package: caption 2020/10/26 v3.5g Customizing captions (AR)
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/caption/caption3.sty
@@ -837,8 +838,8 @@ o
 File: caption-beamer.sto 2020/08/22 v2.0 Adaption of the caption package to the
  beamer document classes (AR)
 ))
-\c@caption@flags=\count340
-\c@continuedfloat=\count341
+\c@caption@flags=\count344
+\c@continuedfloat=\count345
 Package caption Info: hyperref package is loaded.
 Package caption Info: Hyperref support is turned off
 (caption)             because hyperref has stopped early.
@@ -848,9 +849,9 @@ Package: ltcaption 2020/05/30 v1.4b longtable captions (AR)
 ))
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/l3backend/l3backend-pdfte
 x.def
-File: l3backend-pdftex.def 2021-02-18 L3 backend support: PDF output (pdfTeX)
-\l__color_backend_stack_int=\count342
-\l__pdf_internal_box=\box79
+File: l3backend-pdftex.def 2021-10-12 L3 backend support: PDF output (pdfTeX)
+\l__color_backend_stack_int=\count346
+\l__pdf_internal_box=\box83
 ) (./final_slides.aux
 
 LaTeX Warning: Label `' multiply defined.
@@ -938,7 +939,7 @@ Package: refcount 2019/12/15 v3.6 Data extraction from label references (HO)
 string.sty
 Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
 )
-\c@section@level=\count343
+\c@section@level=\count347
 )
 LaTeX Info: Redefining \ref on input line 119.
 LaTeX Info: Redefining \pageref on input line 119.
@@ -1051,22 +1052,22 @@ Overfull \hbox (12.32678pt too wide) has occurred while \output is active
 LaTeX Font Info:    Trying to load font information for OT1+lmss on input line 
 176.
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/lm/ot1lmss.fd
-File: ot1lmss.fd 2009/10/30 v1.6 Font defs for Latin Modern
+File: ot1lmss.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OML+lmm on input line 1
 76.
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/lm/omllmm.fd
-File: omllmm.fd 2009/10/30 v1.6 Font defs for Latin Modern
+File: omllmm.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OMS+lmsy on input line 
 176.
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/lm/omslmsy.fd
-File: omslmsy.fd 2009/10/30 v1.6 Font defs for Latin Modern
+File: omslmsy.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OMX+lmex on input line 
 176.
 (/Users/vgonzenb/Library/TinyTeX/texmf-dist/tex/latex/lm/omxlmex.fd
-File: omxlmex.fd 2009/10/30 v1.6 Font defs for Latin Modern
+File: omxlmex.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <10.95> on input line 176.
@@ -1431,6 +1432,10 @@ Overfull \hbox (12.32678pt too wide) has occurred while \output is active
 [32
 
 ]
+Overfull \vbox (13.3266pt too high) detected at line 634
+ []
+
+
 Overfull \hbox (12.32678pt too wide) has occurred while \output is active
  [][]  
  []
@@ -1494,11 +1499,78 @@ Overfull \hbox (12.32678pt too wide) has occurred while \output is active
 [41
 
 ]
+Overfull \vbox (13.3266pt too high) detected at line 950
+ []
+
+
 Overfull \hbox (12.32678pt too wide) has occurred while \output is active
  [][]  
  []
 
 [42
+
+]
+Overfull \hbox (12.32678pt too wide) has occurred while \output is active
+ [][]  
+ []
+
+[43
+
+]
+Overfull \hbox (12.32678pt too wide) has occurred while \output is active
+ [][]  
+ []
+
+[44
+
+]
+Overfull \hbox (12.32678pt too wide) has occurred while \output is active
+ [][]  
+ []
+
+[45
+
+]
+Overfull \hbox (12.32678pt too wide) has occurred while \output is active
+ [][]  
+ []
+
+[46
+
+]
+Overfull \hbox (12.32678pt too wide) has occurred while \output is active
+ [][]  
+ []
+
+[47
+
+]
+Overfull \hbox (12.32678pt too wide) has occurred while \output is active
+ [][]  
+ []
+
+[48
+
+]
+Overfull \hbox (12.32678pt too wide) has occurred while \output is active
+ [][]  
+ []
+
+[49
+
+]
+Overfull \hbox (12.32678pt too wide) has occurred while \output is active
+ [][]  
+ []
+
+[50
+
+]
+Overfull \hbox (12.32678pt too wide) has occurred while \output is active
+ [][]  
+ []
+
+[51
 
 ]
 \tf@nav=\write6
@@ -1518,13 +1590,13 @@ Package rerunfilecheck Info: File `final_slides.out' has not changed.
 (rerunfilecheck)             Checksum: 0839C3CAADC200D7AD29249AA511E375;358.
  ) 
 Here is how much of TeX's memory you used:
- 22599 strings out of 480971
- 426609 string characters out of 5906864
- 718964 words of memory out of 5000000
- 39174 multiletter control sequences out of 15000+600000
+ 22955 strings out of 480559
+ 435722 string characters out of 5902366
+ 715048 words of memory out of 5000000
+ 39911 multiletter control sequences out of 15000+600000
  454521 words of font info for 59 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 112i,15n,116p,437b,588s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 101i,15n,108p,437b,606s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/Users/vgonzenb/Library/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}
 {/Users/vgonzenb/Library/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-ec.enc}{/User
 s/vgonzenb/Library/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc}</Users/
@@ -1536,10 +1608,10 @@ Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmssbx10.pfb></Users/vgonzenb/
 Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmsso10.pfb></Users/vgonzenb/L
 ibrary/TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy10.pfb></Users/vgonzenb/Lib
 rary/TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy8.pfb>
-Output written on final_slides.pdf (42 pages, 1458553 bytes).
+Output written on final_slides.pdf (51 pages, 1475830 bytes).
 PDF statistics:
- 558 PDF objects out of 1000 (max. 8388607)
- 444 compressed objects within 5 object streams
- 126 named destinations out of 1000 (max. 500000)
+ 647 PDF objects out of 1000 (max. 8388607)
+ 515 compressed objects within 6 object streams
+ 153 named destinations out of 1000 (max. 500000)
  276 words of extra memory for PDF output out of 10000 (max. 10000000)
 
