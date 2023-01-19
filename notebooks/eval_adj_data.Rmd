@@ -98,34 +98,36 @@ saveRDS(list_df, "tmp/list_of_df.rds")
 
 MS patients from the *HSC* site that were scanned in a *SIEMENSTIMTRIO* scanner were excluded from the current harmonization.
 
-```{r}
+```{r, eval=FALSE}
 img = png::readPNG('docs/batch_exclusion_MS.png')
 grid::grid.raster(img)
 ```
 
 ## IMPORTANT (cont.)
 
-The corresponding group in the Healthy Control data was similarly excluded when modeling site effects with ComBat-GAM. 
+The corresponding group in the Healthy Control data was similarly excluded when modeling site effects with ComBat-GAM.
 
-```{r}
+```{r, eval=FALSE}
 img = png::readPNG('docs/batch_exclusion_HC.png')
 grid::grid.raster(img)
 ```
 
 ## Datasets: MS
- 
-MS (dimensions):  
+
+MS (dimensions):
 
 ```{r}
 dim(MS_Lin)
 ```
 
 MS (count by site)
+
 ```{r}
-MS_Lin %>% group_by(site) %>% count() %>% kable()
+MS_Lin %>% group_by(site) %>% count()
 ```
 
 MS (count by sex)
+
 ```{r}
 MS_Lin %>% group_by(sex) %>% count(site) %>% kable()
 ```
@@ -140,12 +142,14 @@ Dimensions HC (no PNC):
 dim(HC_Lin)
 ```
 
-Count per site: 
+Count per site:
+
 ```{r}
 HC_GAM %>% group_by(site) %>% count() %>% kable()
 ```
 
 Count by sex and site:
+
 ```{r}
 HC_GAM %>% group_by(site) %>% count(sex) %>% kable()
 ```
@@ -160,12 +164,14 @@ Dimensions (no PNC):
 dim(rbind(HC_Lin, MS_Lin))
 ```
 
-Count per site: 
+Count per site:
+
 ```{r}
 rbind(HC_Lin, MS_Lin) %>% group_by(site) %>% count() %>% kable()
 ```
 
 Count by sex and site:
+
 ```{r}
 rbind(HC_Lin, MS_Lin) %>% group_by(site) %>% count(sex) %>% kable()
 ```
@@ -186,16 +192,16 @@ HC_GAM %>% ggplot(aes(x=site, col=site, y=age)) + geom_boxplot() + facet_wrap(~s
 
 ## Harmonization Approach
 
-Adjusted data are shown for the following approach:  
+Adjusted data are shown for the following approach:
 
-- Join HC and MS data into one dataset
-- Split this dataset into males and females  
-- Run ComBat (GAM and Linear) on in parallel on males and females.
+-   Join HC and MS data into one dataset
+-   Split this dataset into males and females\
+-   Run ComBat (GAM and Linear) on in parallel on males and females.
 
 Models used in harmonization
 
-- GAM: s(age) + MS + MS*x*age
-- Linear: age + age^2 + MS + MS*x*age + MS*x*age2
+-   GAM: s(age) + MS + MS*x*age
+-   Linear: age + age\^2 + MS + MS*x*age + MS*x*age2
 
 ```{r}
 check_roi_site_fx = function(df, roi_names, mod_sex = FALSE, mod_MS = FALSE, mod_interaction = TRUE, print_Ps = FALSE){
@@ -245,7 +251,7 @@ check_roi_site_fx = function(df, roi_names, mod_sex = FALSE, mod_MS = FALSE, mod
 
 Number of ROIs showing site effects:
 
-Full covariate model: 
+Full covariate model:
 
 ```{r}
 # Full model
@@ -253,6 +259,7 @@ rbind(HC_GAM, MS_GAM) %>% check_roi_site_fx(roi_small, mod_sex = TRUE, mod_MS = 
 ```
 
 Ignore sex:
+
 ```{r}
 # Full model
 rbind(HC_GAM, MS_GAM) %>% check_roi_site_fx(roi_small, mod_sex = FALSE, mod_MS = TRUE) %>% pander()
@@ -260,7 +267,7 @@ rbind(HC_GAM, MS_GAM) %>% check_roi_site_fx(roi_small, mod_sex = FALSE, mod_MS =
 
 ## Site effects by sex: MS + HC [GAM]
 
-Females: 
+Females:
 
 ```{r}
 rbind(HC_GAM, MS_GAM) %>%  filter(sex == "FEMALE") %>% check_roi_site_fx(roi_small, mod_MS = TRUE) %>% pander()
@@ -274,15 +281,15 @@ rbind(HC_GAM, MS_GAM) %>% filter(sex == "MALE") %>%  check_roi_site_fx(roi_small
 
 ## Site effects: MS + HC [Linear]
 
-Full covariate model: 
+Full covariate model:
 
 ```{r}
 # Full model
 rbind(MS_Lin, HC_Lin) %>% check_roi_site_fx(roi_small, mod_MS = TRUE) %>% pander()
 ```
 
-
 Sex not considered:
+
 ```{r}
 # Without considering sex
 rbind(MS_Lin, HC_Lin) %>% check_roi_site_fx(roi_small, mod_MS = TRUE) %>% pander()
@@ -290,7 +297,7 @@ rbind(MS_Lin, HC_Lin) %>% check_roi_site_fx(roi_small, mod_MS = TRUE) %>% pander
 
 ## Site effects by sex: MS + HC [Linear]
 
-Females: 
+Females:
 
 ```{r}
 rbind(MS_Lin, HC_Lin) %>% filter(sex == "FEMALE") %>% check_roi_site_fx(roi_small, mod_sex = FALSE, mod_MS = TRUE) %>% pander()
@@ -302,11 +309,9 @@ Males:
 rbind(MS_Lin, HC_Lin) %>% filter(sex == "MALE") %>% check_roi_site_fx(roi_small, mod_sex = FALSE, mod_MS = TRUE) %>% pander()
 ```
 
-
-
 ## Site effects: MS [GAM]
 
-Full model: 
+Full model:
 
 ```{r}
 # Full model
@@ -324,13 +329,15 @@ MS_GAM %>% check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 
 Number of ROIs showing site effects:
 
-Full model: 
+Full model:
+
 ```{r}
 # Full model
 MS_Lin %>% check_roi_site_fx(roi_small, mod_sex = TRUE) %>% pander()
 ```
 
 Sex not considered:
+
 ```{r}
 # Without considering sex
 MS_Lin %>% check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
@@ -366,7 +373,7 @@ MS_Lin %>% filter(sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FAL
 
 ## Site effects: HC [GAM]
 
-Full model: 
+Full model:
 
 ```{r}
 # Full model
@@ -379,6 +386,7 @@ Sex not considered:
 # Without considering sex
 HC_GAM %>% check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
+
 ## Site effects by sex: HC [GAM]
 
 Females:
@@ -393,18 +401,19 @@ Males:
 HC_GAM %>% filter(sex == "MALE") %>%  check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
 ```
 
-
 ## Site effects: HC [Linear]
 
 Number of ROIs showing site effects:
 
-Full model: 
+Full model:
+
 ```{r}
 # Full model
 HC_Lin %>% check_roi_site_fx(roi_small, mod_sex = TRUE) %>% pander()
 ```
 
 Sex not considered:
+
 ```{r}
 # Without considering sex
 HC_Lin %>% check_roi_site_fx(roi_small, mod_sex = FALSE) %>% pander()
@@ -471,14 +480,16 @@ run_full_model = function(data, roi_names, mod_site = FALSE){
 }
 ```
 
-Full model = ROI ~ ICV + age + age2 + sex + sex*age + sex*age2 + MS + MS*age + MS*age2
+Full model = ROI \~ ICV + age + age2 + sex + sex*age + sex*age2 + MS + MS*age + MS*age2
 
 ## Raw data
+
 ```{r}
 run_full_model(raw_df, roi_small) %>% pander()
 ```
 
 ## Harmonized data (GAM)
+
 ```{r}
 run_full_model(harmonized_df, roi_small) %>% pander()
 ```
@@ -490,6 +501,7 @@ run_full_model(raw_df, roi_small, mod_site = TRUE) %>% pander()
 ```
 
 ## Harmonized data (w/ site)
+
 ```{r}
 run_full_model(harmonized_df, roi_small, mod_site = TRUE) %>% pander()
 ```

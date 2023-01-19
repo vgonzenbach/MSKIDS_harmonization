@@ -6,3 +6,10 @@ data/base/
 docs/
 notebooks/cache
 notebooks/figures
+.vscode
+tmp/
+data/
+renv/
+results/
+.Rprofile
+harmonized_data_PNC+MS.csv
