@@ -1,7 +1,7 @@
 ---
 title: "Examining the effect of MS on brain volumes in a pediatric sample"
 date: "2023-01-25"
-author: "Virgilio Gonzenbach"
+author: "Virgilio Gonzenbach, Quy Cao"
 output: 
   html_document:
     code_folding: hide
@@ -21,29 +21,25 @@ output:
 
 </style>
 
-# MSKIDS analysis
-
-This report examines the effect of Multiple Sclerosis (MS) on brain volumes in a pediatric sample. The data used in this analysis consists of a harmonized dataset of volumetric measurements of 145 brain regions and covariates such as age, sex and MS status.
-
-Multiple linear regression models were performed to investigate the relationship between MS and brain volume measurements. The models were run separately for each brain region of interest (ROI) and the results were reported for ROIs that showed significant associations with MS, after adjusting for multiple corrections using false discovery rate. 
-
+# MSKIDS volumetric analysis
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,
                       out.width = '1400px',
-                      dpi=300)
+                      dpi=300,
+                      cache=FALSE)
 knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+options(scipen=999) # turn off scientific notation (for p-values)
 ```
 
 ```{r message=FALSE}
 library(tidyverse)
 library(broom)
-library(shiny)
 
 # load the data
 df <- read.csv('data/harmonized_data_PNC+MS.csv', stringsAsFactors = TRUE) %>% 
   mutate(MS = as.factor(MS)) %>% 
-  mutate_at(vars(starts_with('X')), ~ . *0.001) %>% # convert mm^3 to cm^3
+  #mutate_at(vars(starts_with('X')), ~ . *0.001) %>% # convert mm^3 to cm^3
   rename(ICV = X702,
          Sex = sex, 
          Age = age)
@@ -59,36 +55,74 @@ dict_df <- readxl::read_excel('data/MUSE_ROI_Dict.xlsx') %>%
   select(ROI_INDEX, TISSUE_SEG, ROI_NAME) %>% 
   mutate(ROI_INDEX = paste0('X', ROI_INDEX),
          TISSUE_SEG = recode(TISSUE_SEG, `GM+WM+VN+BS+cCSF` = 'ICV')) %>% 
-  filter(ROI_INDEX %in% ROI_INDICES)
+  filter(ROI_INDEX %in% ROI_INDICES) %>% 
+  mutate(ROI_NAME = str_replace(ROI_NAME, "( AnG| Calc| FRP| FuG| IOG| MCgG| PrG| PO)", "") %>%
+           str_replace(" Inf ", " Inferior ") %>% 
+           str_replace(" Vent$", " Ventricle ") %>% 
+           str_replace(" Lat ", " Lateral ") %>% 
+           str_replace_all("Wm", "White Matter") %>% 
+           str_to_title
+         )
+  
+# to exclude abbreviation in significant rois
+
+# to exclude all abbreviations from ROI_NAME (currently ails)
+# roi_abbreviations = ' Ofug |Ocp | Mtg | Msfg | Mpog | Morg  | Mog | Mfc | Mcgg | Lorg | Lig | Itg | Iog | Gre | Fug | Frp | Fo | Ent | Cun | Co | CO | Acgg | ACgG | AIns | AOrG | AnG | Calc | FRP | FuG | IOG | MCgC | PO | Opifg | Orifg | Pcgg | Pcu | Phg | Pins | Pog |  Porg | Pp | Prg | Pt | Sca | Sfg | Smc | Smg | Sog | Spl | Stg | Tmp | Trifg | Ttg | Fo | '
+  
+
 ```
 
+This report examines the effect of Multiple Sclerosis (MS) on brain volumes in a pediatric sample. 
+The data used in this analysis consists of a harmonized dataset of volumetric measurements of 145 brain regions (and intracranial volume) as well as covariates such as age, sex and MS status.
+
+Our ***primary*** aim was to investigate the effect of having MS on the 145 brain regions. 
+For our ***secondary*** aim, we sought to investigate the interaction between MS status and sex in the same brain regions.
+
+The 145 brain regions of interest are listed below. Throughout the report we use the abbreviations 'GM', 'WM' and 'VN' for Gray Matter, White Matter and Ventricular regions respectively. 
+
+```{r}
+dict_df %>% 
+  select(ROI_NAME, TISSUE_SEG)
+```
+
+Multiple linear regression models were performed to investigate the relationship between MS and brain volume measurements in these regions. 
+The models were run separately for each brain region of interest (ROI) and the results were reported for the ROIs that showed significant effects after adjusting for multiple corrections using the false discovery rate method. 
+The results of these models are accompanied by box plots to help interpret the findings.
+This analysis shows that MS is associated with specific brain volume changes in a pediatric population.
+
 ## Sample size
+
+Total sample size: `r nrow(df)`.
+
+Sample size per MS status and sex:
 
 ```{r}
 # print cell sizes and total sample size
 df %>% 
-  count(Sex, MS) %>% 
-  bind_rows(summarize(., n = sum(n)))
+  mutate(MS=fct_recode(MS, Yes = "1", No = "0")) %>% 
+  count(Sex, MS)
+
 ```
 
 ## Models 
 
-Multiple regression models were run to investigate the relationship between MS and brain volumes. The models were run separately for each brain region of interest (ROI) and the results were reported for ROIs that showed significant associations with MS. The models controlled for sex, age, age squared and intracranial volume (ICV). Additionally, interactions between MS and sex were also included in the model. The results of these models are reported and visualized using box plots to help interpret the findings.
+### Primary aim
 
-The analysis shows that MS is associated with specific brain volume changes in pediatric population.
-
+For our primary analysis, multiple regression models were run to investigate the relationship between MS and brain volumes. The models were run separately (i.e. in parallel) for each brain region of interest (ROI) and the results are reported for ROIs that showed significant associations with MS. The models controlled for Sex, Age, Age Squared, Age by Sex interaction, and Intracranial Volume (ICV). 
+  
 Model equation:
-
 \begin{align}
-ROI &= \beta_0 + \beta_1*Sex + \beta_2*Age + \beta_3*Age^2 + \beta_4*Sex*Age + \beta_5*MS*Sex + \beta_6*ICV + \epsilon
+ROI &= \beta_0 + \beta_1*Sex + \beta_2*Age + \beta_3*Age^2 + \beta_4*Sex*Age + \beta_5*ICV + \beta_6*MS + \epsilon
 \end{align}
 
-Model R formula:
+#### Significant main effects: MS 
 
-`ROI ~ Sex + Age + Age^2 + Sex*Age + MS*Sex + ICV`
+With healthy controls as the reference group, the main effect in milliliters ($mL$) of having MS, after accounting for control variables, is shown in the `estimate` column for each significant ROI in the table below. Individual effects are described below the table.
 
-```{r, eval=FALSE}
-# No MS-sex interation Model: ROI ~ Sex + Age + Age^2 + Sex\*Age + MS + ICV
+```{r}
+#####
+# Main effect Model: ROI ~ Sex + Age + Age^2 + Sex\*Age + MS + ICV
+#####
 run_model <- function(outcome){
   #' run model for each ROI
   f <- as.formula(sprintf("%s ~ Sex + Age + Age^2 + Sex*Age + MS + ICV", outcome))
@@ -103,22 +137,70 @@ models <- ROI_INDICES %>%
   bind_rows(.id = 'ROI_INDEX') %>%
   left_join(dict_df, by = c('ROI_INDEX')) %>% # join with ROI dictionary
   select(ROI_INDEX, ROI_NAME, TISSUE_SEG, everything())
-
 # use FDR correction
-models %>% 
+sig_main_effects_df <- models %>% 
   filter(term == 'MS1') %>% 
-  mutate(p.value = p.adjust(p.value, method='fdr')) %>% 
-  filter(p.value < 0.05)
+  mutate(p.value.adj = round(p.adjust(p.value, method='fdr'),4)) %>% 
+  filter(p.value.adj < 0.05) %>% 
+  mutate(p.value = round(p.value, 4)) %>%
+  arrange(by = TISSUE_SEG) 
 ```
 
 ```{r}
+#Example interpretation: the right thalamus proper volume in the grey matter region of MS patients is 659 mL less on average compared to that of non-MS patients (95% CI: (xx,xx), p-value = 0.001)
+sig_main_effects_df %>% 
+  filter(term == 'MS1') %>% 
+  select(-ROI_INDEX, -std.error, -statistic, -term)
+```
+
+```{r, results='asis'}
+# function to describe results
+describe_main_effect <- function(row){
+  sprintf("The %s volume of MS patient is %.3f mL %s, on average, compared to that of controls (95%% CI: (%.3f, %.3f), p = %.3f).",
+         row$ROI_NAME, 
+         round(abs(row$estimate), 2), 
+         ifelse(sign(row$estimate) == 1, 'bigger', 'smaller'), 
+         round(row$estimate - row$std.error, 3), 
+         round(row$estimate + row$std.error, 3), 
+         round(row$p.value, 3)
+        ) |> invisible()
+}
+
+# split by rows
+rows <- sig_main_effects_df %>% 
+  split(seq_len(nrow(sig_main_effects_df)))
+
+for (effect_row in rows){ # make list output
+  cat("\n")
+  cat("-", describe_main_effect(effect_row), "\n")
+}
+```
+
+### Secondary aim
+
+For our secondary analysis, we ran models that included an interaction term.
+
+Model equation:
+
+\begin{align}
+ROI &= \beta_0 + \beta_1*Sex + \beta_2*Age + \beta_3*Age^2 + \beta_4*Sex*Age + \beta_5*ICV + \beta_6*MS*Sex + \epsilon
+\end{align}
+  
+#### Significant interaction effects: MS by Sex
+
+With MS females as the reference group, the interaction effect in milliliters ($mL$) of having MS and being male is shown in the `estimate` column for each significant ROI. These effects are independent of the main effect of sex.
+
+```{r}
+#####
+# Interaction effect Model: ROI ~ Sex + Age + Age^2 + Sex\*Age + MS*Sex + ICV----
+#####
 run_model <- function(outcome){
    #' run model for one ROI
   f <- as.formula(sprintf("%s ~ Sex + Age + Age^2 + Sex*Age + MS*Sex + ICV", outcome))
   res <- lm(f, data = df)
 }
 
-# run models searately for each ROI
+# run models separately for each ROI
 models <- ROI_INDICES %>% 
   purrr::map(run_model) %>% 
   purrr::map(tidy) %>% 
@@ -128,87 +210,108 @@ models <- ROI_INDICES %>%
   select(ROI_INDEX, ROI_NAME, TISSUE_SEG, everything())
 
 # select effects/terms of interest and adjust p values. keep significant effects
-sig_effects <- models %>% 
-  filter(term %in% c('SexMALE:MS1', 'MS1')) %>% 
-  mutate(p.value.adj = round(p.adjust(p.value, method='fdr'),4)) %>% # adjust for 145*2 = 290 MCs
+sig_interaction_effects_df <- models %>% 
+  filter(term %in% c('SexMALE:MS1')) %>% 
+  mutate(p.value.adj = p.adjust(p.value, method='fdr'),4) %>% 
   filter(p.value.adj < 0.05) %>% 
+  mutate(p.value = round(p.value, 4),
+         p.value.adj = round(p.value.adj, 4)) %>% 
   arrange(by = TISSUE_SEG)
+
+# show results
+sig_interaction_effects_df %>% 
+  filter(term == 'SexMALE:MS1') %>% 
+  select(-ROI_INDEX, -std.error, -statistic, -term)
 ```
 
-### Significant main effects: MS
+```{r, results='asis'}
+# describe each result
+describe_interaction_effect <- function(row){
+  sprintf("The %s volume of MS males is %.3f mL %s, on average, compared to that of MS females after accounting for the main effect of MS (95%% CI: (%.3f, %.3f), p = %.3f).",
+         row$ROI_NAME, 
+         round(abs(row$estimate), 2), 
+         ifelse(sign(row$estimate) == 1, 'bigger', 'smaller'), 
+         round(row$estimate - row$std.error, 3), 
+         round(row$estimate + row$std.error, 3), 
+         round(row$p.value.adj, 3)
+        ) |> invisible()
+}
 
-With healthy controls as the reference group, the main effect (in $cm^3$) of having MS is shown in the `estimate` column for each significant ROI.
+# split by rows
+rows <- sig_interaction_effects_df %>% 
+  split(seq_len(nrow(sig_interaction_effects_df)))
 
-```{r}
-sig_effects %>% 
-  filter(term == 'MS1')
+for (effect_row in rows){ # make list output
+  cat("\n")
+  cat("-", describe_interaction_effect(effect_row), "\n")
+}
 ```
-  
-Results show that across Grey Matter (GM) regions, MS patients show decreased volumes relative to controls; whereas in the $3^{rd}$ ventricle and the left and right frontal lobes, MS patients had higher volume than controls.
 
-### Significant interaction effects
+## Visualization
 
-With MS females as the reference group, the interaction effect (in $cm^3$) of having MS and being male is shown in the `estimate` column for each significant ROI. These effects are independent of the main effect of sex.
-
-```{r}
-sig_effects %>% 
-  filter(term == 'SexMALE:MS1')
-```
-
-
-Results that show that MS males have higher volumes than females in right and left Thalamus and right inferior lateral ventricle. On the other hand MS males exhibit reduced volumes in the left frontal lobe than MS females. 
-
-
-## Visualization {.tabset}
-
-The means for the ROIs with a significant main effect (of MS status) and/or interaction (of MS status with sex) are plotted below by age and MS status.
+The means for the ROIs with a significant main effect and interaction are plotted below.  
 
 ```{r, warning=FALSE}
-plot_means <- function(roi, data=df) {
-  #' make a box plot for a given roi
-  roi_name <- dict_df %>% 
+get_roi_name <- function(roi) dict_df %>% 
     filter(ROI_INDEX == roi) %>%
     pull(ROI_NAME)
+
+plot_means_main_effect <- function(roi, data=df){
+  #' make a box plot for a given roi
+  roi_name <- get_roi_name(roi)
   
-  sig_effects <- sig_effects %>% 
-    filter(ROI_INDEX == roi) %>% 
-    pull(term) %>% 
-    recode("MS1" = "main effect", "SexMALE:MS1" = "interaction")
+  data %>% 
+    mutate(MS=fct_recode(MS, Yes = "1", No = "0")) %>% 
+    ggplot(aes_string(y=roi, x='MS')) + 
+    geom_boxplot(fill='purple') + 
+    ylab(sprintf("%s (mL)", roi_name)) +
+    theme_bw()
+
+}
+
+## make a boxplot for ROIs with significant main effects
+ sig_rois_main_effect <- sig_main_effects_df %>% 
+  pull(ROI_INDEX) 
+ 
+sig_rois_main_effect_plots <- sig_rois_main_effect %>% 
+  purrr::map(~ plot_means_main_effect(.x, data=df)) %>% 
+  setNames(sig_rois_main_effect)
+```
+
+### Main Effect 
+
+We plot ROI volumes to visualize the main effect of MS. The "tabs" can be used to toggle the different plots.
+
+#### ROI Volumes {.tabset}
   
-  title <- ggtitle(sprintf("Significant effects of MS: %s", knitr::combine_words(sig_effects)))
+```{r, results='asis', echo = TRUE}
+for (sig_roi in sig_rois_main_effect){
+  cat("##### ",get_roi_name(sig_roi),"\n")
+  print(sig_rois_main_effect_plots[[sig_roi]])
+  cat('\n\n')
+}
+```
+
+### Interaction Effect
+
+#### ROI volumes minus Age and ICV effect {.tabset}
+  
+Here, we regress out the effect of Age, Age Squared and ICV to better visualize the effect of the MS and sex interaction.  
+
+```{r, warning=FALSE}
+plot_means_interaction_effect <- function(roi, data=df){
+  #' make a box plot for a given roi
+  roi_name <- get_roi_name(roi)
   
   data %>% 
     mutate(MS=fct_recode(MS, Yes = "1", No = "0")) %>% 
     ggplot(aes_string(y=roi, x='MS', fill='Sex')) + 
     geom_boxplot() + 
-    ylab(sprintf("%s (cm3)", roi_name)) +
-    theme_bw() + title
+    ylab(sprintf("%s (mL)", roi_name)) +
+    theme_bw() 
+
     
 }
-
-## make a boxplot for ROIs with significant effects
-sig_rois <- sig_effects %>% 
-  pull(ROI_INDEX) %>% 
-  unique()
-
-plots <- sig_rois %>% 
-  purrr::map(~ plot_means(.x), data=df) %>% 
-  setNames(sig_rois)
-```
-
-### Volumes {.tabset}
-
-```{r, results='asis', echo = FALSE}
-for (sig_roi in sig_rois){
-  cat("#### ",sig_roi,"\n")
-  print(plots[[sig_roi]])
-  cat('\n\n')
-}
-```
-
-### Volumes minus Age and ICV effect {.tabset}
-
-```{r, warning=FALSE}
 # regress out nuisance effects from roi
 reg_out_roi <- function(roi){
   #' run model for each ROI
@@ -218,16 +321,20 @@ reg_out_roi <- function(roi){
 
 reg_out_df <- df %>% 
    mutate_at(vars(starts_with('X')), reg_out_roi)
-  
-plots_reg_out <- sig_rois %>% 
-  purrr::map(plot_means, data=reg_out_df) %>% 
-  setNames(sig_rois)
+
+## make a boxplot for ROIs with significant interaction effects
+sig_rois_interaction_effect <- sig_interaction_effects_df %>% 
+  pull(ROI_INDEX) 
+
+interaction_effect_plots <- sig_rois_interaction_effect %>% 
+  purrr::map(~ plot_means_interaction_effect(.x, data=reg_out_df)) %>% 
+  setNames(sig_rois_interaction_effect)
 ```
 
 ```{r, results='asis', echo = FALSE}
-for (sig_roi in sig_rois){
-  cat("#### ",sig_roi,"\n")
-  print(plots_reg_out[[sig_roi]])
+for (sig_roi in sig_rois_interaction_effect){
+  cat("##### ",get_roi_name(sig_roi),"\n")
+  print(interaction_effect_plots[[sig_roi]])
   cat('\n\n')
 }
 ```
