@@ -23,16 +23,16 @@ output:
 
 # MSKIDS analysis
 
-This report examines the effect of Multiple Sclerosis (MS) on brain volumes in a pediatric sample. The data used in this analysis consists of a harmonized dataset of volumetric measurements of 145 brain regionm and covariates such as age, sex and MS status.
+This report examines the effect of Multiple Sclerosis (MS) on brain volumes in a pediatric sample. The data used in this analysis consists of a harmonized dataset of volumetric measurements of 145 brain regions and covariates such as age, sex and MS status.
 
-Multiple linear regression models were run to investigate the relationship between MS and brain volumes. The models were run separately for each brain region of interest (ROI) and the results were reported for ROIs that showed significant associations with MS. 
+Multiple linear regression models were performed to investigate the relationship between MS and brain volume measurements. The models were run separately for each brain region of interest (ROI) and the results were reported for ROIs that showed significant associations with MS, after adjusting for multiple corrections using false discovery rate. 
 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,
                       out.width = '1400px',
                       dpi=300)
-knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+#knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 ```
 
 ```{r message=FALSE}
@@ -77,7 +77,7 @@ Multiple regression models were run to investigate the relationship between MS a
 
 The analysis shows that MS is associated with specific brain volume changes in pediatric population.
 
-Model notation:
+Model equation:
 
 \begin{align}
 ROI &= \beta_0 + \beta_1*Sex + \beta_2*Age + \beta_3*Age^2 + \beta_4*Sex*Age + \beta_5*MS*Sex + \beta_6*ICV + \epsilon
@@ -130,8 +130,8 @@ models <- ROI_INDICES %>%
 # select effects/terms of interest and adjust p values. keep significant effects
 sig_effects <- models %>% 
   filter(term %in% c('SexMALE:MS1', 'MS1')) %>% 
-  mutate(p.value = p.adjust(p.value, method='fdr')) %>% 
-  filter(p.value < 0.05) %>% 
+  mutate(p.value.adj = round(p.adjust(p.value, method='fdr'),4)) %>% # adjust for 145*2 = 290 MCs
+  filter(p.value.adj < 0.05) %>% 
   arrange(by = TISSUE_SEG)
 ```
 
@@ -233,30 +233,30 @@ for (sig_roi in sig_rois){
 ```
 
 
-## Distribution of control variables
+<!-- ## Distribution of control variables -->
 
-### Age
+<!-- ### Age -->
 
-```{r}
-df$Age %>% summary() %>% as.matrix() %>% t() %>% as.data.frame()
-```
+<!-- ```{r} -->
+<!-- df$Age %>% summary() %>% as.matrix() %>% t() %>% as.data.frame() -->
+<!-- ``` -->
 
-```{r}
-df %>% 
-   mutate(MS=fct_recode(MS, Yes = "1", No = "0")) %>% 
-  ggplot(aes(y=Age, fill=Sex, x = MS)) + geom_boxplot() + theme_bw()
-```
+<!-- ```{r} -->
+<!-- df %>%  -->
+<!--    mutate(MS=fct_recode(MS, Yes = "1", No = "0")) %>%  -->
+<!--   ggplot(aes(y=Age, fill=Sex, x = MS)) + geom_boxplot() + theme_bw() -->
+<!-- ``` -->
 
 
-### ICV
+<!-- ### ICV -->
 
-```{r}
-df$ICV %>% summary() %>% as.matrix() %>% t() %>% as.data.frame()
-```
+<!-- ```{r} -->
+<!-- df$ICV %>% summary() %>% as.matrix() %>% t() %>% as.data.frame() -->
+<!-- ``` -->
 
-```{r}
-df %>% 
-  mutate(MS=fct_recode(MS, Yes = "1", No = "0")) %>% 
-  ggplot(aes(y=ICV, fill=Sex, x = MS)) + geom_boxplot() + theme_bw() + ylab('ICV (cm3)') 
-```
+<!-- ```{r} -->
+<!-- df %>%  -->
+<!--   mutate(MS=fct_recode(MS, Yes = "1", No = "0")) %>%  -->
+<!--   ggplot(aes(y=ICV, fill=Sex, x = MS)) + geom_boxplot() + theme_bw() + ylab('ICV (cm3)')  -->
+<!-- ``` -->
 
