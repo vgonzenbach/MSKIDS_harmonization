@@ -39,7 +39,7 @@ library(broom)
 # load the data
 df <- read.csv('data/harmonized_data_PNC+MS.csv', stringsAsFactors = TRUE) %>% 
   mutate(MS = as.factor(MS)) %>% 
-  #mutate_at(vars(starts_with('X')), ~ . *0.001) %>% # convert mm^3 to cm^3
+  mutate_at(vars(starts_with('X')), ~ . *0.001) %>% # convert mm^3 to cm^3
   rename(ICV = X702,
          Sex = sex, 
          Age = age) %>% 
@@ -146,16 +146,16 @@ sig_main_effects_df <- models_df %>%
   filter(term == 'MS1') %>% 
   mutate(p.value.adj = p.adjust(p.value, method='fdr')) %>% 
   # add confidence intervals:
-  add_column(confidence.interval = purrr::map(models, confint, parm = "MS1") %>% purrr::map(~sprintf("(%.1f, %.1f)", .x[1], .x[2])) |> unlist(),
+  add_column(confidence.interval = purrr::map(models, confint, parm = "MS1") %>% purrr::map(~sprintf("(%.3f, %.3f)", .x[1], .x[2])) |> unlist(),
              .after = 'estimate') %>% 
   filter(p.value.adj < 0.05) %>% 
   mutate(p.value = ifelse(p.value < 0.0001, 
-                          "<0.0001",
+                          "< 0.0001",
                           as.character(round(p.value, 4))),
          p.value.adj = ifelse(p.value.adj < 0.0001, 
-                          "<0.0001",
+                          "< 0.0001",
                           as.character(round(p.value.adj, 4))),
-         estimate = round(estimate, 1)) %>%
+         estimate = round(estimate, 3)) %>%
   arrange(by = TISSUE_SEG)
 
 ```
@@ -169,12 +169,12 @@ sig_main_effects_df %>%
 ```{r, results='asis'}
 # function to describe results
 describe_main_effect <- function(row){
-  sprintf("The %s volume of MS patient is %.1f mL %s, on average, compared to that of non-MS controls (95%% CI: %s, p = %s).",
+  sprintf("The %s volume of MS patient is %.3f mL %s, on average, compared to that of non-MS controls (95%% CI: %s, p %s).",
          row$ROI_NAME, 
-         round(abs(row$estimate), 1), 
+         round(abs(row$estimate), 3), 
          ifelse(sign(row$estimate) == 1, 'bigger', 'smaller'), 
          row$confidence.interval,
-         row$p.value.adj
+         ifelse(str_detect(row$p.value.adj, "<"), row$p.value.adj, sprintf('= %s', row$p.value.adj))
         ) |> invisible()
 }
 
@@ -228,15 +228,16 @@ models_df <- models %>%
 sig_interaction_effects_df <- models_df %>% 
   filter(term %in% c('SexMale:MS1')) %>% 
   mutate(p.value.adj = p.adjust(p.value, method='fdr')) %>% 
-  add_column(confidence.interval = purrr::map(models, confint, parm = "MS1") %>% purrr::map(~sprintf("(%.1f, %.1f)", .x[1], .x[2])) |> unlist(),
+  add_column(confidence.interval = purrr::map(models, confint, parm = 'SexMale:MS1') %>% purrr::map(~sprintf("(%.3f, %.3f)", .x[1], .x[2])) |> unlist(),
              .after = 'estimate') %>% 
   filter(p.value.adj < 0.05) %>% 
   mutate(p.value = ifelse(p.value < 0.0001, 
-                          "<0.0001",
+                          "< 0.0001",
                           as.character(round(p.value, 4))),
          p.value.adj = ifelse(p.value.adj < 0.001, 
-                          "<0.0001",
-                          as.character(round(p.value.adj, 4)))) %>% 
+                          "< 0.0001",
+                          as.character(round(p.value.adj, 4))),
+         estimate = round(estimate, 3)) %>% 
   arrange(by = TISSUE_SEG)
 
 # show results
@@ -248,12 +249,12 @@ sig_interaction_effects_df %>%
 ```{r, results='asis'}
 # describe each result
 describe_interaction_effect <- function(row){
-  sprintf("The %s volume of MS males is %.1f mL %s, on average, compared to that of MS females after accounting for the main effect of MS (95%% CI: %s, p = %s).",
+  sprintf("The %s volume of MS males is %.3f mL %s, on average, compared to that of MS females after accounting for the main effect of MS (95%% CI: %s, p %s).",
          row$ROI_NAME, 
-         round(abs(row$estimate), 2), 
+         round(abs(row$estimate), 3), 
          ifelse(sign(row$estimate) == 1, 'bigger', 'smaller'), 
          row$confidence.interval,
-         row$p.value.adj
+         ifelse(str_detect(row$p.value.adj, "<"), row$p.value.adj, sprintf('= %s', row$p.value.adj))
         ) |> invisible()
 }
 
